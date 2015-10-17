@@ -7,9 +7,14 @@
 #'  an R network object. These networks can then be processed
 #'  and analyzed.
 #'
-#'  @param start_date start date of time period as Ymd-format integer (ex: June 1, 2014 as 20140601)
-#'  @param end_date end date of time period as Ymd-format integer (ex: June 1, 2014 as 20140601)
-#'  @param level level of event granularity ('eventcode' or 'rootcode')
+#'  @param start_date start date of time period as Ymd-format integer (ex:
+#'          June 1, 2014 as 20140601)
+#'  @param end_date end date of time period as Ymd-format integer (ex:
+#'          June 1, 2014 as 20140601)
+#'  @param level level of event granularity ('eventcode' or 'rootcode').
+#'          'Eventcode' creates a network for each of the 226 sub-codes in
+#'          CAMEO. 'Rootcode' creates a network for each of the 20 event
+#'          root codes in CAMEO.
 #'
 #'  @return master_networks a LIST object containing daily event-networks.
 #'
@@ -46,9 +51,10 @@ phoenix_net <- function(start_date, end_date, level){
 
   ## Set up column headers (raw files are headless) and date range
   headers <- c('eventid', 'date', 'year', 'month', 'day'
-               , 'sourceactorfull', 'sourceactorentity', 'sourceactorrole', 'sourceactorattribute'
-               , 'targetactorfull', 'targetactorentity', 'targetactorrole', 'targetactorattribute'
-               , 'eventcode', 'eventrootcode', 'pentaclass', 'goldsteinscore', 'issues'
+               , 'sourceactorfull', 'sourceactorentity', 'sourceactorrole'
+               , 'sourceactorattribute', 'targetactorfull', 'targetactorentity'
+               , 'targetactorrole', 'targetactorattribute', 'eventcode'
+               , 'eventrootcode', 'pentaclass', 'goldsteinscore', 'issues'
                , 'lat', 'long', 'locationname', 'statename', 'countrycode'
                , 'sentenceid', 'urls', 'newssources')
 
@@ -65,11 +71,11 @@ phoenix_net <- function(start_date, end_date, level){
         , 861:863, 87, 871:874, 90:94, 100:101, 1011:1014, 102:103, 1031:1034
         , 104, 1041:1044, 105, 1051:1056, 106:108, 110:112, 1121:1125, 113:116
         , 120:121, 1211:1214, 122, 1221:1224, 123, 1231:1234, 124, 1241:1246
-        , 125:129, 130:131, 1311:1313, 132, 1321:1324, 133:138, 1381:1385, 139:141
-        , 1411:1414, 142, 1421:1424, 143, 1431:1434, 144, 1441:1444, 145
-        , 1451:1454, 150:155, 160:162, 1621:1623, 163:166, 1661:1663, 170:171
-        , 1711:1712, 172, 1721:1724, 173:176, 180:182, 1821:1823, 183, 1831:1834
-        , 184:186, 190:195, 1951:1952, 196, 200:204, 2041:2042)
+        , 125:129, 130:131, 1311:1313, 132, 1321:1324, 133:138, 1381:1385
+        , 139:141, 1411:1414, 142, 1421:1424, 143, 1431:1434, 144, 1441:1444
+        , 145, 1451:1454, 150:155, 160:162, 1621:1623, 163:166, 1661:1663
+        , 170:171, 1711:1712, 172, 1721:1724, 173:176, 180:182, 1821:1823, 183
+        , 1831:1834, 184:186, 190:195, 1951:1952, 196, 200:204, 2041:2042)
       )
   }
 
@@ -99,9 +105,13 @@ phoenix_net <- function(start_date, end_date, level){
     temp <- tempfile()
     try(
       {
-        download.file(paste('https://s3.amazonaws.com/openeventdata/current/events.full.', date, '.txt.zip', sep = ''),temp)
-        data <- data.table(read.table(unz(temp, paste('events.full.', date, '.txt', sep = ''))
-                                      , header = F, fill = T, sep = '\t', quote = "", na.string = ''
+        download.file(paste('https://s3.amazonaws.com/openeventdata
+                            /current/events.full.', date, '.txt.zip'
+                            , sep = ''),temp)
+        data <- data.table(read.table(unz(temp, paste('events.full.', date
+                                                      , '.txt', sep = ''))
+                                      , header = F, fill = T, sep = '\t'
+                                      , quote = "", na.string = ''
                                       , stringsAsFactor = F))
         setnames(data, headers)
         master_data[as.character(date)] <- list(data)
@@ -121,7 +131,7 @@ phoenix_net <- function(start_date, end_date, level){
   #
   ######
 
-  ## Coerce eventrootcode/eventcode columns to numeric - there are sometimes typos
+  ## Coerce eventrootcode/eventcode columns to numeric - there are a few typos
   master_data[, eventrootcode := as.numeric(eventrootcode)]
   master_data <- master_data[!is.na(eventrootcode)]
   master_data[, eventcode := as.numeric(eventcode)]
@@ -131,13 +141,17 @@ phoenix_net <- function(start_date, end_date, level){
   # 1. involve specified actor set on both side (as ENTITIES)
   # 2. involve TWO DIFFERENT actors (i.e. no self-interactions)
   # and only USEFUL columns
-  master_data <- master_data[(sourceactorentity %in% actors & targetactorentity %in% actors)
-                          & (sourceactorrole %in% 'GOV' | is.na(sourceactorrole))
-                          & (targetactorrole %in% 'GOV' | is.na(targetactorrole))
+  master_data <- master_data[(sourceactorentity %in% actors
+                              & targetactorentity %in% actors)
+                          & (sourceactorrole %in% 'GOV'
+                             | is.na(sourceactorrole))
+                          & (targetactorrole %in% 'GOV'
+                             | is.na(targetactorrole))
                           & sourceactorentity != targetactorentity
                           , list(date, sourceactorentity, targetactorentity
                                 , eventrootcode, eventcode)]
-  setkeyv(master_data, c('date', 'sourceactorentity', 'targetactorentity', 'eventrootcode'))
+  setkeyv(master_data, c('date', 'sourceactorentity'
+                         , 'targetactorentity', 'eventrootcode'))
 
   ## Subset columns: drop unused event column
   if(level == 'rootcode'){

@@ -11,7 +11,9 @@ phoenix_net(start_date, end_date, level)
 
 \item{end_date}{end date of time period as Ymd-format integer (ex: June 1, 2014 as 20140601)}
 
-\item{level}{level of event granularity ('eventcode' or 'rootcode')}
+\item{level}{level of event granularity ('eventcode' or 'rootcode'). 'Eventcode' creates
+         a network for each of the 226 sub-codes in CAMEO. 'Rootcode' creates a network
+         for each of the 20 event root codes in CAMEO.}
 }
 \value{
 master_networks a LIST object containing daily event-networks.
