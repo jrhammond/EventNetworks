@@ -1,5 +1,3 @@
-rm(list=ls())
-install.packages(c('devtools', 'roxygen2', 'knitr'))
 library(devtools)
 library(roxygen2)
 library(knitr)
@@ -8,9 +6,6 @@ library(countrycode)
 library(reshape2)
 library(statnet)
 library(plyr)
-
-# setwd('/Users/macbook/Dropbox/Minerva/ProcessedFiles')
-setwd('C:\\Users\\Jesse\\Dropbox\\Minerva\\ProcessedFiles')
 
 ######
 #
@@ -31,15 +26,6 @@ setwd('C:\\Users\\Jesse\\Dropbox\\Minerva\\ProcessedFiles')
 #
 ######
 
-## Define input arguments
-start_date <- as.Date('20140620', format = '%Y%m%d')
-end_date <- as.Date('20151008', format = '%Y%m%d')
-level <- 'rootcode'
-# actors <- 'state'
-# time <- 'day'
-save_raw <- F
-
-## Function start
 phoenix_net <- function(start_date, end_date, level){
   
   ######
@@ -217,5 +203,3 @@ phoenix_net <- function(start_date, end_date, level){
 
   return(master_networks)
 }
-
-test <- phoenix_net(start_date, end_date, time, level, actors)
