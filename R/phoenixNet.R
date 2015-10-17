@@ -11,16 +11,18 @@ library(plyr)
 #'  an R network object. These networks can then be processed
 #'  and analyzed.
 #'
-#' ARGUMENTS:
-#'  @param start_date: start date of time period (Y%m%d DATE) \code{start_date}
-#'  @param end_date: end date of time period (Y%m%d DATE) \code{end_date}
-#'  @param level: level of event granularity (eventcode or rootcode) \code{level}
+#'  @param start_date start date of time period as Y%m%d DATE \code{start_date}
+#'  @param end_date end date of time period as Y%m%d DATE \code{end_date}
+#'  @param level level of event granularity - eventcode or rootcode \code{level}
+#'
+#'  @return master_networks a LIST object containing daily event-networks.
+#'
+#'  @keywords phoenix, event data
 #'
 #'
 
 phoenix_net <- function(start_date, end_date, level){
 
-  ######
   #
   # Set up some initial values
   #
