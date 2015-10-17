@@ -1,9 +1,3 @@
-library(data.table)
-library(countrycode)
-library(reshape2)
-library(statnet)
-library(plyr)
-
 #'
 #' Convert Phoenix event data to daily event-networks.
 #'
@@ -24,20 +18,30 @@ library(plyr)
 #'
 
 phoenix_net <- function(start_date, end_date, level){
+  require(data.table)
+  require(countrycode)
+  require(reshape2)
+  require(statnet)
+  require(plyr)
 
-  #'
-  #' Set up some initial values
-  #'
+  ######
+  #
+  # Set up some initial values
+  #
+  ######
 
-  #' Date objects
-  dates <- seq.Date(start_date, end_date, by = time)
+  ## Date objects
+  if (class(start_date) %in% c('numeric', 'integer')
+      | class(end_date) %in% c('numeric', 'integer')){
+    start_date <- as.Date(ymd(start_date))
+    end_date <- as.Date(ymd(end_date))
+  }
+  dates <- seq.Date(start_date, end_date, by = 'day')
   dates <- as.integer(format(dates, '%Y%m%d'))
 
   ## Actors (default to 255 ISO3C state codes)
-  if(actors == 'state'){
-    actors <- countrycode::countrycode_data$iso3c
-    actors <- as.factor(sort(actors))
-  }
+  actors <- countrycode::countrycode_data$iso3c
+  actors <- as.factor(sort(actors))
   n <- length(actors)
 
   ## Set up column headers (raw files are headless) and date range
@@ -81,7 +85,7 @@ phoenix_net <- function(start_date, end_date, level){
 
   # Storage for daily network objects
   master_networks <- vector('list', length(codes))
-  names(master_networks) <- as.character(codes)
+  names(master_networks) <- paste0('code', codes)
 
   ######
   #
@@ -193,8 +197,9 @@ phoenix_net <- function(start_date, end_date, level){
     }
 
     ## Store list in master network list
-    master_networks[as.character(this_code)] <- list(code_networks)
+    master_networks[paste0('code', this_code)] <- list(code_networks)
   }
 
   return(master_networks)
 }
+
