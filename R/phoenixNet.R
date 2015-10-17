@@ -1,50 +1,42 @@
-library(devtools)
-library(roxygen2)
-library(knitr)
 library(data.table)
 library(countrycode)
 library(reshape2)
 library(statnet)
 library(plyr)
 
-######
-#
-# FUNCTION: Take event-level data and convert it into 
-#  networks of interaction by time period. Output is in
-#  the form of a list object where each element is
-#  an R network object. These networks can then be processed
-#  and analyzed.
-#
-# ARGUMENTS:
-#  -start_date: start date of time period (DATE string)
-#  -end_date: end date of time period (DATE string)
-#  -level: level of event granularity (eventcode or rootcode)
-#  -actor: set of actors (state or all)
-#  -time: temporal granularity (day or week)
-#  -save_raw: whether or not to save raw files (T/F)
-#
-#
-######
+#'
+#' FUNCTION: Take event-level data and convert it into
+#'  networks of interaction by time period. Output is in
+#'  the form of a list object where each element is
+#'  an R network object. These networks can then be processed
+#'  and analyzed.
+#'
+#' ARGUMENTS:
+#'  @param start_date: start date of time period (Y%m%d DATE) \code{start_date}
+#'  @param end_date: end date of time period (Y%m%d DATE) \code{end_date}
+#'  @param level: level of event granularity (eventcode or rootcode) \code{level}
+#'
+#'
 
 phoenix_net <- function(start_date, end_date, level){
-  
+
   ######
   #
   # Set up some initial values
   #
   ######
-  
+
   ## Date objects
   dates <- seq.Date(start_date, end_date, by = time)
   dates <- as.integer(format(dates, '%Y%m%d'))
-  
+
   ## Actors (default to 255 ISO3C state codes)
   if(actors == 'state'){
     actors <- countrycode::countrycode_data$iso3c
     actors <- as.factor(sort(actors))
   }
   n <- length(actors)
-  
+
   ## Set up column headers (raw files are headless) and date range
   headers <- c('eventid', 'date', 'year', 'month', 'day'
                , 'sourceactorfull', 'sourceactorentity', 'sourceactorrole', 'sourceactorattribute'
@@ -52,7 +44,7 @@ phoenix_net <- function(start_date, end_date, level){
                , 'eventcode', 'eventrootcode', 'pentaclass', 'goldsteinscore', 'issues'
                , 'lat', 'long', 'locationname', 'statename', 'countrycode'
                , 'sentenceid', 'urls', 'newssources')
-  
+
   ## Factor variables describing CAMEO categories
   if(level == 'rootcode'){
     codes <- factor(1:20)
@@ -73,29 +65,29 @@ phoenix_net <- function(start_date, end_date, level){
         , 184:186, 190:195, 1951:1952, 196, 200:204, 2041:2042)
       )
   }
-  
+
   ######
   #
   # Set up some empty storage objects
   #
-  ###### 
-  
+  ######
+
   # Storage for daily Phoenix files
   master_data <- vector('list', length(dates))
   names(master_data) <- as.character(dates)
-  
+
   # Storage for daily network objects
   master_networks <- vector('list', length(codes))
   names(master_networks) <- as.character(codes)
-  
+
   ######
-  # 
+  #
   # Download raw files from Phoenix data set and combine into one
   #  large data table. This avoids accidental double-counting of
   #  events that happen on day A but are reported on day B.
   #
   ######
-  
+
   for(date in dates){
     temp <- tempfile()
     try(
@@ -111,17 +103,17 @@ phoenix_net <- function(start_date, end_date, level){
     )
     unlink(temp)
   }
-  
+
   ## Convert list of data.tables to single large table
   master_data <- data.table(rbindlist(master_data))
-  
+
   ######
-  # 
+  #
   # Pre-format data by de-duplicating, cleaning dates and actors,
   # and dropping unused columns
   #
-  ###### 
-  
+  ######
+
   ## Coerce eventrootcode/eventcode columns to numeric - there are sometimes typos
   master_data[, eventrootcode := as.numeric(eventrootcode)]
   master_data <- master_data[!is.na(eventrootcode)]
@@ -146,57 +138,57 @@ phoenix_net <- function(start_date, end_date, level){
   } else {
     master_data[, eventrootcode := NULL]
   }
-  
+
   ## Set names to generic
   setnames(master_data, c('date', 'actora', 'actorb', 'code'))
-  
+
   ## Subset events: drop duplicated events/days/actors
   master_data <- master_data[!duplicated(master_data)]
-  
+
   ## Subset events: keep only events within date range
   master_data <- master_data[date %in% dates]
   master_data <- data.table(master_data)
 
   ## Set CAMEO coded event/root codes to factors
   master_data[, code := factor(code, levels = codes)]
-  
+
   ## Set actor codes to factors
   master_data[, actora := factor(actora, levels = levels(actors))]
-  master_data[, actorb := factor(actorb, levels = levels(actors))]  
+  master_data[, actorb := factor(actorb, levels = levels(actors))]
 
   ######
-  # 
+  #
   # For each time period in the specified range, subset the master data set,
   #  convert interactions to network ties, and turn the resulting edgelist
   #  into a network object. Save networks to a master list object.
   #
-  ###### 
-    
-    
+  ######
+
+
   for(this_code in codes){
-    
+
     ## Subset by code
     event_data <- master_data[code %in% this_code]
-    
+
     ## Create temporary storage list for code/day networks
     code_networks <- vector('list', length(dates))
     names(code_networks) <- as.character(dates)
-    
+
     for(today in dates){
       ## Pull today's network multiplex
       daily_data <- event_data[date %in% today]
-      
+
       ## Initialize the network size and characteristics
       event_net <- network.initialize(n = n, directed = T, loops = F)
       network.vertex.names(event_net) <- levels(actors)
-      
+
       ## Add edges based on dyadic ties
       add.edges(event_net, tail = daily_data$actora, head = daily_data$actorb)
-      
+
       ## Store in network list
       code_networks[as.character(today)] <- list(event_net)
     }
-    
+
     ## Store list in master network list
     master_networks[as.character(this_code)] <- list(code_networks)
   }
