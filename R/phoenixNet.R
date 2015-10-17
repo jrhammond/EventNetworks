@@ -5,15 +5,17 @@ library(statnet)
 library(plyr)
 
 #'
-#' FUNCTION: Take event-level data and convert it into
+#' Convert Phoenix event data to daily event-networks.
+#'
+#'  Take event-level data and convert it into
 #'  networks of interaction by time period. Output is in
-#'  the form of a list object where each element is
+#'  the form of a nested list object where each element is
 #'  an R network object. These networks can then be processed
 #'  and analyzed.
 #'
-#'  @param start_date start date of time period as Y%m%d DATE \code{start_date}
-#'  @param end_date end date of time period as Y%m%d DATE \code{end_date}
-#'  @param level level of event granularity - eventcode or rootcode \code{level}
+#'  @param start_date start date of time period as Ymd-format integer (ex: June 1, 2014 as 20140601)
+#'  @param end_date end date of time period as Ymd-format integer (ex: June 1, 2014 as 20140601)
+#'  @param level level of event granularity ('eventcode' or 'rootcode')
 #'
 #'  @return master_networks a LIST object containing daily event-networks.
 #'
@@ -23,12 +25,11 @@ library(plyr)
 
 phoenix_net <- function(start_date, end_date, level){
 
-  #
-  # Set up some initial values
-  #
-  ######
+  #'
+  #' Set up some initial values
+  #'
 
-  ## Date objects
+  #' Date objects
   dates <- seq.Date(start_date, end_date, by = time)
   dates <- as.integer(format(dates, '%Y%m%d'))
 
