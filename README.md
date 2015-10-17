@@ -52,9 +52,12 @@ downloaded 333 KB
 
 Warning message:
 In eval(expr, envir, enclos) : NAs introduced by coercion
-> phoenix_data$'code10'
-
-$`20140620`
+> names(phoenix_data)
+ [1] "code1"  "code2"  "code3"  "code4"  "code5"  "code6"  "code7"  "code8"  "code9"  "code10" "code11" "code12"
+[13] "code13" "code14" "code15" "code16" "code17" "code18" "code19" "code20"
+> names(phoenix_data$code10)
+[1] "date20140620" "date20140621"
+> phoenix_data$code10$'date20140620'
  Network attributes:
   vertices = 255 
   directed = TRUE 
@@ -65,23 +68,6 @@ $`20140620`
   total edges= 7 
     missing edges= 0 
     non-missing edges= 7 
-
- Vertex attribute names: 
-    vertex.names 
-
-No edge attributes
-
-$`20140621`
- Network attributes:
-  vertices = 255 
-  directed = TRUE 
-  hyper = FALSE 
-  loops = FALSE 
-  multiple = FALSE 
-  bipartite = FALSE 
-  total edges= 5 
-    missing edges= 0 
-    non-missing edges= 5 
 
  Vertex attribute names: 
     vertex.names 

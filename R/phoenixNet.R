@@ -179,7 +179,7 @@ phoenix_net <- function(start_date, end_date, level){
 
     ## Create temporary storage list for code/day networks
     code_networks <- vector('list', length(dates))
-    names(code_networks) <- as.character(dates)
+    names(code_networks) <- paste0('date', dates)
 
     for(today in dates){
       ## Pull today's network multiplex
@@ -193,7 +193,7 @@ phoenix_net <- function(start_date, end_date, level){
       add.edges(event_net, tail = daily_data$actora, head = daily_data$actorb)
 
       ## Store in network list
-      code_networks[as.character(today)] <- list(event_net)
+      code_networks[paste0('date', today)] <- list(event_net)
     }
 
     ## Store list in master network list
