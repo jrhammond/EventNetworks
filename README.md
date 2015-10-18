@@ -34,9 +34,11 @@ Usage
 'phoenixNet' contains the following function:
 
 * `phoenix_net' intakes a start date, end date, and event aggregation level
-  as arguments, and outputs a list of network objects. Each network contains
-  ties between the 255 ISO-recognized states in the international system,
-  where a tie represents an event or interaction between two states.
+  as arguments, and outputs a list of dynamic network objects (tsna::networkDynamic). 
+  Each dynamic network describes daily interactions along one CAMEO-coded event category
+  or event root category between the 255 ISO-coded states in the international system. 
+  These are directed, binarized (1/0) networks, in which a tie between two states i and j
+  indicates that state i initiated at least one event of a given type towards state j.
   
 Example:
 
