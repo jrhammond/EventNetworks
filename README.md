@@ -41,7 +41,8 @@ Usage
 Example:
 
 ```
-> phoenix_data <- phoenix_net(20140620, 20140621, 'rootcode')
+> # Create a set of dynamic event-networks, one for each event root category
+> data <- phoenix_net(start_date = 20140620, end_date = 20140622, level = 'rootcode')
 trying URL 'https://s3.amazonaws.com/openeventdata/current/events.full.20140620.txt.zip'
 Content type 'application/zip' length 179107 bytes (174 KB)
 downloaded 174 KB
@@ -50,14 +51,46 @@ trying URL 'https://s3.amazonaws.com/openeventdata/current/events.full.20140621.
 Content type 'application/zip' length 341968 bytes (333 KB)
 downloaded 333 KB
 
+trying URL 'https://s3.amazonaws.com/openeventdata/current/events.full.20140622.txt.zip'
+Content type 'application/zip' length 300094 bytes (293 KB)
+downloaded 293 KB
+
 Warning message:
 In eval(expr, envir, enclos) : NAs introduced by coercion
-> names(phoenix_data)
- [1] "code1"  "code2"  "code3"  "code4"  "code5"  "code6"  "code7"  "code8"  "code9"  "code10" "code11" "code12"
-[13] "code13" "code14" "code15" "code16" "code17" "code18" "code19" "code20"
-> names(phoenix_data$code10)
-[1] "date20140620" "date20140621"
-> phoenix_data$code10$'date20140620'
+> # Examine one dynamic network element containing data for event root code 10
+> data$code10
+NetworkDynamic properties:
+  distinct change times: 3 
+  maximal time range: 20140620 until  20140622 
+
+Includes optional net.obs.period attribute:
+ Network observation period info:
+  Number of observation spells: 3 
+  Maximal time range observed: 20140620 until 20140622 
+  Temporal mode: continuous 
+  Time unit: unknown 
+  Suggested time increment: NA 
+
+ Network attributes:
+  vertices = 255 
+  directed = TRUE 
+  hyper = FALSE 
+  loops = FALSE 
+  multiple = FALSE 
+  bipartite = FALSE 
+  net.obs.period: (not shown)
+  total edges= 15 
+    missing edges= 0 
+    non-missing edges= 15 
+
+ Vertex attribute names: 
+    active vertex.names 
+
+ Edge attribute names: 
+    active 
+> # Extract one day's worth of events as a discrete network object
+> daily_network <- network.collapse(data$code10, at = 20140620)
+> daily_network
  Network attributes:
   vertices = 255 
   directed = TRUE 
