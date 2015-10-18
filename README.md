@@ -3,7 +3,7 @@ phoenixNet
 
 Download, munge, and transform Phoenix auto-coded event data to daily event-networks.
 
-`phoenixNet' includes a small set of functions that download a specified range of daily
+'phoenixNet' includes a small set of functions that download a specified range of daily
 event files from the Phoenix data storage (http://phoenixdata.org/data/current), 
 process the data to remove possible duplicate events, subset by actors to focus on
 interactions between state governments, and convert the resulting data to a set of daily 
