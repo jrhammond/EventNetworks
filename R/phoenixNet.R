@@ -27,7 +27,9 @@ phoenix_net <- function(start_date, end_date, level){
   require(countrycode)
   require(reshape2)
   require(statnet)
+  require(tsna)
   require(plyr)
+  require(lubridate)
 
   ######
   #
@@ -105,9 +107,9 @@ phoenix_net <- function(start_date, end_date, level){
     temp <- tempfile()
     try(
       {
-        download.file(paste('https://s3.amazonaws.com/openeventdata
-                            /current/events.full.', date, '.txt.zip'
-                            , sep = ''),temp)
+        download.file(paste0(
+          'https://s3.amazonaws.com/openeventdata/current/events.full.'
+          , date, '.txt.zip'),temp)
         data <- data.table(read.table(unz(temp, paste('events.full.', date
                                                       , '.txt', sep = ''))
                                       , header = F, fill = T, sep = '\t'
@@ -210,8 +212,13 @@ phoenix_net <- function(start_date, end_date, level){
       code_networks[paste0('date', today)] <- list(event_net)
     }
 
+    ## Collapse to TSNA dynamic-network object
+    temporal_codenet <- networkDynamic(network.list = code_networks
+                                       , onsets = dates, termini = dates
+                                       , verbose = F)
+
     ## Store list in master network list
-    master_networks[paste0('code', this_code)] <- list(code_networks)
+    master_networks[paste0('code', this_code)] <- list(temporal_codenet)
   }
 
   return(master_networks)
