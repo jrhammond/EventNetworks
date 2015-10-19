@@ -12,7 +12,7 @@ event-networks by event code or event root code.
 Please note: this tool does not (currently) save the raw Phoenix daily files to disk.
 If you are interested in acquiring and saving the raw data to plot or analyze as 
 events rather than network ties, I suggest using the excellent `phoxy' package created
-by Andrew Halterman at Caerus Associates (https://github.com/ahalterman/phoxy).
+by [Andrew Halterman](https://github.com/ahalterman/phoxy) at Caerus Associates.
 
 The current development of the Phoenix Data Project is a collaborative effort between 
 Caerus Associates (Erin Simpson, Andrew Halterman, and John Beieler), Parus Analytics 
