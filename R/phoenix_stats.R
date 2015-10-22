@@ -21,6 +21,77 @@
 
 phoenix_stats <- function(dailynets, output){
 
+  ######
+  #
+  # Set up some initial values
+  #
+  ######
+
+  codes <- names(dailynets)
+  ndates <- length(dailynets[[1]])
+
+  ######
+  #
+  # Set up some empty storage objects
+  #
+  ######
+
+  for(code in codes){
+    ## Extract one set of daily event-networks
+    event_dnet <- dailynets[[code]]
+    ## Pull date information
+    dates <- get.network.attribute(event_dnet, 'net.obs.period')$observations
+    ## (this is a stupid way but I can't figure out how to natively
+    ##  extract date-names from networkDynamic objects)
+    dates <- unique(as.integer(as.vector(unlist(dates)[1:(ndates*2)])))
+
+    for(date in dates){
+      ## Pull one date's network
+      daily_net <- network.collapse(event_dnet, at = date)
+
+      ######
+      #
+      # Extract a set of NETWORK-LEVEL statistics
+      #
+      ######
+
+      ## Mean degree
+      mean_indegree <- mean(degree(daily_net, cmode = 'indegree'))
+      mean_outdegree <- mean(degree(daily_net, cmode = 'outdegree'))
+
+      ## Density
+      net_density <- network.density(daily_net)
+
+      ## Transitivity
+      net_trans <- gtrans(daily_net, diag =  F, mode = 'digraph')
+
+      ## Triad census
+      net_triads <- triad.census(daily_net, mode = 'digraph')
+
+      ## Dyad census
+      net_dyads <- dyad.census(daily_net)
+
+      ## Clique cycle census
+      net_cliques <- clique.census(daily_net, clique.comembership = 'sum')
+
+
+      ######
+      #
+      # Extract a set of NODE-LEVEL statistics
+      #
+      ######
+
+      ## Degree
+      indegree_dist <- degree(daily_net, cmode = 'indegree')
+      outdegree_dist <- degree(daily_net, cmode = 'outdegree')
+
+      ## Transitivity
+      net_trans <- gtrans(daily_net, diag =  F, mode = 'digraph')
+    }
+
+  }
+
+
 
 
 
