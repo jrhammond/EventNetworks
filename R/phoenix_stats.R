@@ -173,10 +173,12 @@ phoenix_stats <- function(dailynets){
       # Indegree
       indegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'indegree'
                                    , rescale = T), nrow = 1)
+      indegree_dist[is.nan(indegree_dist)] <- 0
       dimnames(indegree_dist)[[2]] <- nodes
       # Outdegree
       outdegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'outdegree'
                                     , rescale = T), nrow = 1)
+      outdegree_dist[is.nan(outdegree_dist)] <- 0
       dimnames(outdegree_dist)[[2]] <- nodes
 
       ## Betweenness
