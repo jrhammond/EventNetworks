@@ -114,3 +114,19 @@ Includes optional net.obs.period attribute:
     vertex.names 
 
 No edge attributes
+
+> data2 <- phoenix_stats(data)
+> data2$code10$netstats
+       date mean_degree      density modularity num_communities mean_commsize cross_tieshare dyadMut dyadAsym
+1: 20140620  0.05490196 1.080747e-04  0.4591837               3      3.000000      0.1428571       0        7
+2: 20140621  0.03921569 7.719623e-05  0.5600000               3      2.333333      0.0000000       1        3
+3: 20140622  0.04705882 9.263548e-05  0.5000000               2      4.000000      0.0000000       0        6
+   dyadNull triad003 triad012 triad102 triad021D triad021U triad021C triad111D triad111U triad030T triad030C
+1:    32378  2729373     1753        0         6         3         0         0         0         0         0
+2:    32381  2730124      758      252         0         0         0         1         0         0         0
+3:    32379  2729622     1508        0         2         0         3         0         0         0         0
+   triad201 triad120D triad120U triad120C triad210 triad300
+1:        0         0         0         0        0        0
+2:        0         0         0         0        0        0
+3:        0         0         0         0        0        0
+
