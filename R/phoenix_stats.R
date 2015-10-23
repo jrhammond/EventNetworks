@@ -73,8 +73,6 @@ phoenix_stats <- function(dailynets){
     event_network_communities <- vector('list', length(dates))
     names(event_network_communities) <- as.character(dates)
 
-
-
     for(thisdate in dates){
       ## Pull one date's network
       daily_net <- network.collapse(event_dnet, at = thisdate)
@@ -157,16 +155,14 @@ phoenix_stats <- function(dailynets){
       ######
 
       ## Degree
+      # Indegree
       indegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'indegree'
                                    , rescale = T), nrow = 1)
       dimnames(indegree_dist)[[2]] <- nodes
-
-      # indegree_dist <- (indegree_dist - mean(indegree_dist)) / sd(indegree_dist)
-
+      # Outdegree
       outdegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'outdegree'
                                     , rescale = T), nrow = 1)
       dimnames(outdegree_dist)[[2]] <- nodes
-      # outdegree_dist <- (outdegree_dist - mean(outdegree_dist)) / sd(outdegree_dist)
 
       ## Betweenness
       between_dist <- matrix(sna::betweenness(as.matrix.network(daily_net), gmode = 'digraph'
@@ -206,7 +202,7 @@ phoenix_stats <- function(dailynets){
 
     master_data[[code]] <- event_data
 
-
   }
 
+  return(master_data)
 }
