@@ -155,7 +155,7 @@ phoenix_stats <- function(dailynets){
       comm_try <- try({
         comm_ties <- data.table(thisdate, which(comm_adj == 1, arr.ind = T))
         }, silent = T)
-      if(class(comm_try) == 'try-error'){
+      if(class(comm_try)[1] == 'try-error'){
         comm_ties <- data.table('thisdate' = integer(), 'nodea' = integer()
                                 , 'nodeb' = integer())
       }
