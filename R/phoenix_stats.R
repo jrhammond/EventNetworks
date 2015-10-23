@@ -182,6 +182,7 @@ phoenix_stats <- function(dailynets){
       ## Betweenness
       between_dist <- matrix(sna::betweenness(as.matrix.network(daily_net), gmode = 'digraph'
                                   , rescale = T), nrow = 1)
+      between_dist[is.nan(between_dist)] <- 0
       dimnames(between_dist)[[2]] <- nodes
 
 
