@@ -31,6 +31,7 @@ phoenix_net <- function(start_date, end_date, level){
   require(plyr)
   require(lubridate)
 
+
   ######
   #
   # Set up some initial values
