@@ -16,8 +16,16 @@
 #'
 #'
 
-
 phoenix_stats <- function(dailynets){
+
+  require(data.table)
+  require(countrycode)
+  require(reshape2)
+  require(statnet)
+  require(tsna)
+  require(plyr)
+  require(lubridate)
+  require(intergraph)
 
   ######
   #

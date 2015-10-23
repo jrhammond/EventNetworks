@@ -6,6 +6,3 @@ require(tsna)
 require(plyr)
 require(lubridate)
 require(intergraph)
-
-# source('phoenix_net.R')
-# source('phoenix_stats.R')
