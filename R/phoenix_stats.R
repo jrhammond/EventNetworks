@@ -25,6 +25,7 @@ phoenix_stats <- function(dailynets){
   require(tsna)
   require(plyr)
   require(lubridate)
+  require(igraph)
   require(intergraph)
 
   ######
