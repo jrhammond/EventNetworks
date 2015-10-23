@@ -152,7 +152,13 @@ phoenix_stats <- function(dailynets){
       comm_adj <-  t(comm_membership) %*% comm_membership
 
       # Convert to daily edgelist
-      comm_ties <- data.table(thisdate, which(comm_adj == 1, arr.ind = T))
+      comm_try <- try({
+        comm_ties <- data.table(thisdate, which(comm_adj == 1, arr.ind = T))
+        }, silent = T)
+      if(class(comm_try) == 'try-error'){
+        comm_ties <- data.table('thisdate' = integer(), 'nodea' = integer()
+                                , 'nodeb' = integer())
+      }
       setnames(comm_ties, c('date', 'nodea', 'nodeb'))
       comm_ties <- comm_ties[nodea != nodeb]
       setkeyv(comm_ties, c('nodea', 'nodeb'))
