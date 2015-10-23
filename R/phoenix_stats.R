@@ -149,7 +149,7 @@ phoenix_stats <- function(dailynets){
       colnames(comm_membership) <- 1:255
       comm_membership[comm_edgelist] <- 1
       # Matrix multiply to get shared membership matrix
-      comm_adj <-  t(mat) %*% mat
+      comm_adj <-  t(comm_membership) %*% comm_membership
 
       # Convert to daily edgelist
       comm_ties <- data.table(thisdate, which(comm_adj == 1, arr.ind = T))
