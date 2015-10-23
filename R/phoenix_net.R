@@ -21,6 +21,15 @@
 #'  @keywords phoenix, event data
 #'
 
+require(data.table)
+require(countrycode)
+require(reshape2)
+require(statnet)
+require(tsna)
+require(plyr)
+require(lubridate)
+require(intergraph)
+
 phoenix_net <- function(start_date, end_date, level){
 
   require(data.table)
