@@ -35,7 +35,7 @@ phoenix_stats <- function(dailynets){
   ######
 
   codes <- names(dailynets)
-  ndates <- length(dailynets[[1]])
+  ndates <- length(get.network.attribute(data1[[1]],'net.obs.period')$observations)
   nodes <- network.vertex.names(dailynets[[1]])
 
   ######
