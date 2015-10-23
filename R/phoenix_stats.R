@@ -149,7 +149,7 @@ phoenix_stats <- function(dailynets){
       colnames(comm_membership) <- 1:255
       comm_membership[comm_edgelist] <- 1
       # Matrix multiply to get shared membership matrix
-      comm_adj <-  t(mat) %*% mat
+      comm_adj <-  t(comm_membership) %*% comm_membership
 
       # Convert to daily edgelist
       comm_ties <- data.table(thisdate, which(comm_adj == 1, arr.ind = T))
@@ -186,14 +186,14 @@ phoenix_stats <- function(dailynets){
       ######
 
       ## Network level statistics
-      event_network_out[date %in% thisdate, mean_degree := net_degree]
-      event_network_out[date %in% thisdate, density := net_density]
-      event_network_out[date %in% thisdate, modularity := ic_mod]
-      event_network_out[date %in% thisdate, num_communities := num_ic]
-      event_network_out[date %in% thisdate, mean_commsize := meansize_ic]
-      event_network_out[date %in% thisdate, cross_tieshare := share_crossings]
-      event_network_out[date %in% thisdate, dimnames(net_dyads)[[2]] := data.table(net_dyads)]
-      event_network_out[date %in% thisdate, dimnames(net_triads)[[2]] := data.table(net_triads)]
+      event_network_stats[date %in% thisdate, mean_degree := net_degree]
+      event_network_stats[date %in% thisdate, density := net_density]
+      event_network_stats[date %in% thisdate, modularity := ic_mod]
+      event_network_stats[date %in% thisdate, num_communities := num_ic]
+      event_network_stats[date %in% thisdate, mean_commsize := meansize_ic]
+      event_network_stats[date %in% thisdate, cross_tieshare := share_crossings]
+      event_network_stats[date %in% thisdate, dimnames(net_dyads)[[2]] := data.table(net_dyads)]
+      event_network_stats[date %in% thisdate, dimnames(net_triads)[[2]] := data.table(net_triads)]
 
       ## Dyad level statistics
       event_dyad_stats <- rbind(event_dyad_stats, comm_ties)
@@ -204,7 +204,7 @@ phoenix_stats <- function(dailynets){
       event_betweendist[date %in% thisdate, dimnames(between_dist)[[2]] := data.table(between_dist)]
 
       ## Combine into list object for export
-      event_data <- list(event_network_out, event_dyad_stats, event_indegreedist,
+      event_data <- list(event_network_stats, event_dyad_stats, event_indegreedist,
                          event_outdegreedist, event_betweendist)
       names(event_data) <- c('netstats', 'dyadstats', 'indeg', 'outdeg', 'between')
     }
