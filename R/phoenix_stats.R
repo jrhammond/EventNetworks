@@ -30,13 +30,8 @@ phoenix_stats <- function(dailynets, output){
   codes <- names(dailynets)
   ndates <- length(dailynets[[1]])
 
-  ######
-  #
-  # Set up some empty storage objects
-  #
-  ######
-
   for(code in codes){
+
     ## Extract one set of daily event-networks
     event_dnet <- dailynets[[code]]
     ## Pull date information
@@ -44,10 +39,35 @@ phoenix_stats <- function(dailynets, output){
     ## NOTE: this is a stupid way but I can't figure out how to natively
     ##  extract date-names from networkDynamic objects
     dates <- unique(as.integer(as.vector(unlist(dates)[1:(ndates*2)])))
+    dates <- dates[!is.na(dates)]
 
-    for(date in dates){
+
+    ######
+    #
+    # Set up some empty storage objects
+    #
+    ######
+
+    # Table to store network-level stats
+    event_network_stats <- data.table('date' = dates)
+
+    # Table to store dyad-level stats
+    event_dyad_stats <- data.table('date' = dates)
+
+    # Tables to store dyad-level stats
+    event_degreedist <- data.table('date' = dates)
+    event_degreerank <- data.table('date' = dates)
+    event_degreedist <- data.table('date' = dates)
+
+    # Storage objects for irregular network-level data
+    event_network_communities <- vector('list', length(dates))
+    names(event_network_communities) <- as.character(dates)
+
+
+
+    for(thisdate in dates){
       ## Pull one date's network
-      daily_net <- network.collapse(event_dnet, at = date)
+      daily_net <- network.collapse(event_dnet, at = thisdate)
 
       ## Convert to igraph object via 'intergraph' for additional metrics
       daily_graph <- asIgraph(daily_net)
@@ -60,7 +80,7 @@ phoenix_stats <- function(dailynets, output){
 
       ## Mean degree
       # Since it's a mean, in- vs out-degree doesn't matter
-      mean_degree <- mean(sna::degree(as.matrix.network(daily_net), gmode = 'digraph'))
+      net_degree <- mean(sna::degree(as.matrix.network(daily_net), gmode = 'digraph'))
 
       ## Density
       net_density <- network.density(daily_net)
@@ -68,11 +88,13 @@ phoenix_stats <- function(dailynets, output){
       ## Transitivity
       net_trans <- gtrans(daily_net, diag =  F, mode = 'digraph')
 
-      ## Triad census
-      net_triads <- sna::triad.census(as.matrix.network(daily_net), mode = 'digraph')
-
       ## Dyad census
       net_dyads <- sna::dyad.census(as.matrix.network(daily_net))
+      dimnames(net_dyads)[[2]] <- paste0('dyad', dimnames(net_dyads)[[2]])
+
+      ## Triad census
+      net_triads <- sna::triad.census(as.matrix.network(daily_net), mode = 'digraph')
+      dimnames(net_triads)[[2]] <- paste0('triad', dimnames(net_triads)[[2]])
 
       ## Community detection
       ic <- infomap.community(daily_graph)
@@ -111,9 +133,10 @@ phoenix_stats <- function(dailynets, output){
       comm_membership[comm_edgelist] <- 1
       # Matrix multiply to get shared membership matrix
       comm_adj <-  t(mat) %*% mat
-      # Convert to edgelist
-      comm_ties <- data.table(which(comm_adj == 1, arr.ind = T))
-      setnames(comm_ties, c('nodea', 'nodeb'))
+
+      # Convert to daily edgelist
+      comm_ties <- data.table(date, which(comm_adj == 1, arr.ind = T))
+      setnames(comm_ties, c('date', 'nodea', 'nodeb'))
       comm_ties <- comm_ties[nodea != nodeb]
       setkeyv(comm_ties, c('nodea', 'nodeb'))
 
@@ -124,28 +147,35 @@ phoenix_stats <- function(dailynets, output){
       ######
 
       ## Degree
-      indegree_dist <- degree(daily_net, cmode = 'indegree')
-      indegree_rank <- rank(-degree(daily_net, cmode = 'indegree')
-                            , ties.method = 'max')
-      outdegree_dist <- degree(daily_net, cmode = 'outdegree')
-      outdegree_rank <- rank(-degree(daily_net, cmode = 'outdegree')
-                             , ties.method = 'max')
+      indegree_dist <- sna::degree(as.matrix.network(daily_net), cmode = 'indegree')
+      indegree_dist <- (indegree_dist - mean(indegree_dist)) / sd(indegree_dist)
+#       indegree_rank <- rank(-indegree_dist
+#                             , ties.method = 'min')
+      outdegree_dist <- sna::degree(as.matrix.network(daily_net), cmode = 'outdegree')
+      outdegree_dist <- (outdegree_dist - mean(outdegree_dist)) / sd(outdegree_dist)
+#       outdegree_rank <- rank(-outdegree_dist
+#                              , ties.method = 'min')
 
       ## Betweenness
-      between_dist <- betweenness(daily_net, gmode = 'digraph'
+      between_dist <- sna::betweenness(as.matrix.network(daily_net), gmode = 'digraph'
                                   , rescale = T)
 
-      ## Community membership
-      ## NOTE: requires conversion to igraph object via 'intergraph'
-      daily_graph <- asIgraph(daily_net)
-      ebc <- edge.betweenness.community(daily_graph, directed = T, membership = T)
-      modularity(ebc)
-      membership(ebc)
-      ic <- infomap.community(daily_graph)
-      modularity(ic)
 
 
+      ######
+      #
+      # Stuff all these stats into output objects
+      #
+      ######
 
+      event_network_out[date %in% thisdate, mean_degree := net_degree]
+      event_network_out[date %in% thisdate, density := net_density]
+      event_network_out[date %in% thisdate, modularity := ic_mod]
+      event_network_out[date %in% thisdate, num_communities := num_ic]
+      event_network_out[date %in% thisdate, mean_commsize := meansize_ic]
+      event_network_out[date %in% thisdate, cross_tieshare := share_crossings]
+      event_network_out[date %in% thisdate, dimnames(net_dyads)[[2]] := data.table(net_dyads)]
+      event_network_out[date %in% thisdate, dimnames(net_triads)[[2]] := data.table(net_triads)]
     }
 
 
