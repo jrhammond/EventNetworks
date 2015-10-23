@@ -41,13 +41,16 @@ phoenix_stats <- function(dailynets, output){
     event_dnet <- dailynets[[code]]
     ## Pull date information
     dates <- get.network.attribute(event_dnet, 'net.obs.period')$observations
-    ## (this is a stupid way but I can't figure out how to natively
-    ##  extract date-names from networkDynamic objects)
+    ## NOTE: this is a stupid way but I can't figure out how to natively
+    ##  extract date-names from networkDynamic objects
     dates <- unique(as.integer(as.vector(unlist(dates)[1:(ndates*2)])))
 
     for(date in dates){
       ## Pull one date's network
       daily_net <- network.collapse(event_dnet, at = date)
+
+      ## Convert to igraph object via 'intergraph' for additional metrics
+      daily_graph <- asIgraph(daily_net)
 
       ######
       #
@@ -56,8 +59,8 @@ phoenix_stats <- function(dailynets, output){
       ######
 
       ## Mean degree
-      mean_indegree <- mean(degree(daily_net, cmode = 'indegree'))
-      mean_outdegree <- mean(degree(daily_net, cmode = 'outdegree'))
+      # Since it's a mean, in- vs out-degree doesn't matter
+      mean_degree <- mean(sna::degree(as.matrix.network(daily_net), gmode = 'digraph'))
 
       ## Density
       net_density <- network.density(daily_net)
@@ -66,14 +69,53 @@ phoenix_stats <- function(dailynets, output){
       net_trans <- gtrans(daily_net, diag =  F, mode = 'digraph')
 
       ## Triad census
-      net_triads <- triad.census(daily_net, mode = 'digraph')
+      net_triads <- sna::triad.census(as.matrix.network(daily_net), mode = 'digraph')
 
       ## Dyad census
-      net_dyads <- dyad.census(daily_net)
+      net_dyads <- sna::dyad.census(as.matrix.network(daily_net))
 
-      ## Clique cycle census
-      net_cliques <- clique.census(daily_net, clique.comembership = 'sum')
+      ## Community detection
+      ic <- infomap.community(daily_graph)
 
+      ## Network community modularity
+      ic_mod <- modularity(ic)
+
+      ## Number and size of N>1 communities detected
+      num_ic <- length(sizes(ic)[sizes(ic) > 1])
+      size_ic <- sort(sizes(ic)[sizes(ic) > 1], decreasing = T)
+
+      ## Mean community size of N>1 communities
+      meansize_ic <- mean(size_ic)
+
+      ## Share of total ties that connect different communities
+      share_crossings <- sum(crossing(ic, daily_graph) == T) /
+        length(crossing(ic, daily_graph))
+
+      ######
+      #
+      # Extract a set of DYAD-LEVEL statistics
+      #
+      ######
+
+      ## Dyad-level shared-community indicator
+      # Get membership
+      ic_membership <- membership(ic)
+      # Convert to edgelist
+      comm_ids <- (ic_membership[ic_membership %in% names(size_ic)])
+      comm_members <- which(ic_membership %in% comm_ids)
+      comm_edgelist <- cbind(comm_ids, comm_members)
+      # Convert to bimodal adjacency matrix
+      comm_membership <- matrix(0, length(unique(comm_ids)), 255)
+      rownames(comm_membership) <- unique(comm_ids)
+      colnames(comm_membership) <- 1:255
+      comm_membership[comm_edgelist] <- 1
+      # Matrix multiply to get shared membership matrix
+      comm_adj <-  t(mat) %*% mat
+      # Convert to edgelist
+      comm_ties <- data.table(which(comm_adj == 1, arr.ind = T))
+      setnames(comm_ties, c('nodea', 'nodeb'))
+      comm_ties <- comm_ties[nodea != nodeb]
+      setkeyv(comm_ties, c('nodea', 'nodeb'))
 
       ######
       #
@@ -83,11 +125,29 @@ phoenix_stats <- function(dailynets, output){
 
       ## Degree
       indegree_dist <- degree(daily_net, cmode = 'indegree')
+      indegree_rank <- rank(-degree(daily_net, cmode = 'indegree')
+                            , ties.method = 'max')
       outdegree_dist <- degree(daily_net, cmode = 'outdegree')
+      outdegree_rank <- rank(-degree(daily_net, cmode = 'outdegree')
+                             , ties.method = 'max')
 
-      ## Transitivity
-      net_trans <- gtrans(daily_net, diag =  F, mode = 'digraph')
+      ## Betweenness
+      between_dist <- betweenness(daily_net, gmode = 'digraph'
+                                  , rescale = T)
+
+      ## Community membership
+      ## NOTE: requires conversion to igraph object via 'intergraph'
+      daily_graph <- asIgraph(daily_net)
+      ebc <- edge.betweenness.community(daily_graph, directed = T, membership = T)
+      modularity(ebc)
+      membership(ebc)
+      ic <- infomap.community(daily_graph)
+      modularity(ic)
+
+
+
     }
+
 
   }
 
