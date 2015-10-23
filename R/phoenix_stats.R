@@ -8,8 +8,6 @@
 #'
 #'  @param dailynets networkDynamic object containing daily event-nets
 #'          produced via phoenix_net function.
-#'  @param output string of values indicating which statistics to return.
-#'          Defaults to 'ALL'.
 #'
 #'  @return phoenix_out a LIST object of tables containing descriptive
 #'          statistics for daily event-networks.
@@ -19,7 +17,7 @@
 #'
 
 
-phoenix_stats <- function(dailynets, output){
+phoenix_stats <- function(dailynets){
 
   ######
   #
@@ -29,6 +27,17 @@ phoenix_stats <- function(dailynets, output){
 
   codes <- names(dailynets)
   ndates <- length(dailynets[[1]])
+  nodes <- network.vertex.names(dailynets[[1]])
+
+  ######
+  #
+  # Set up some empty storage objects
+  #
+  ######
+
+  # Storage for daily network outputs
+  master_data <- vector('list', length(codes))
+  names(master_data) <- as.character(codes)
 
   for(code in codes){
 
@@ -52,12 +61,13 @@ phoenix_stats <- function(dailynets, output){
     event_network_stats <- data.table('date' = dates)
 
     # Table to store dyad-level stats
-    event_dyad_stats <- data.table('date' = dates)
+    event_dyad_stats <- data.table('date' = integer(), 'nodea' = integer()
+                                   , 'nodeb' = integer())
 
     # Tables to store dyad-level stats
-    event_degreedist <- data.table('date' = dates)
-    event_degreerank <- data.table('date' = dates)
-    event_degreedist <- data.table('date' = dates)
+    event_indegreedist <- data.table('date' = dates)
+    event_outdegreedist <- data.table('date' = dates)
+    event_betweendist <- data.table('date' = dates)
 
     # Storage objects for irregular network-level data
     event_network_communities <- vector('list', length(dates))
@@ -135,7 +145,7 @@ phoenix_stats <- function(dailynets, output){
       comm_adj <-  t(mat) %*% mat
 
       # Convert to daily edgelist
-      comm_ties <- data.table(date, which(comm_adj == 1, arr.ind = T))
+      comm_ties <- data.table(thisdate, which(comm_adj == 1, arr.ind = T))
       setnames(comm_ties, c('date', 'nodea', 'nodeb'))
       comm_ties <- comm_ties[nodea != nodeb]
       setkeyv(comm_ties, c('nodea', 'nodeb'))
@@ -147,19 +157,21 @@ phoenix_stats <- function(dailynets, output){
       ######
 
       ## Degree
-      indegree_dist <- sna::degree(as.matrix.network(daily_net), cmode = 'indegree')
-      indegree_dist <- (indegree_dist - mean(indegree_dist)) / sd(indegree_dist)
-#       indegree_rank <- rank(-indegree_dist
-#                             , ties.method = 'min')
-      outdegree_dist <- sna::degree(as.matrix.network(daily_net), cmode = 'outdegree')
-      outdegree_dist <- (outdegree_dist - mean(outdegree_dist)) / sd(outdegree_dist)
-#       outdegree_rank <- rank(-outdegree_dist
-#                              , ties.method = 'min')
+      indegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'indegree'
+                                   , rescale = T), nrow = 1)
+      dimnames(indegree_dist)[[2]] <- nodes
+
+      # indegree_dist <- (indegree_dist - mean(indegree_dist)) / sd(indegree_dist)
+
+      outdegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'outdegree'
+                                    , rescale = T), nrow = 1)
+      dimnames(outdegree_dist)[[2]] <- nodes
+      # outdegree_dist <- (outdegree_dist - mean(outdegree_dist)) / sd(outdegree_dist)
 
       ## Betweenness
-      between_dist <- sna::betweenness(as.matrix.network(daily_net), gmode = 'digraph'
-                                  , rescale = T)
-
+      between_dist <- matrix(sna::betweenness(as.matrix.network(daily_net), gmode = 'digraph'
+                                  , rescale = T), nrow = 1)
+      dimnames(between_dist)[[2]] <- nodes
 
 
       ######
@@ -168,6 +180,7 @@ phoenix_stats <- function(dailynets, output){
       #
       ######
 
+      ## Network level statistics
       event_network_out[date %in% thisdate, mean_degree := net_degree]
       event_network_out[date %in% thisdate, density := net_density]
       event_network_out[date %in% thisdate, modularity := ic_mod]
@@ -176,15 +189,24 @@ phoenix_stats <- function(dailynets, output){
       event_network_out[date %in% thisdate, cross_tieshare := share_crossings]
       event_network_out[date %in% thisdate, dimnames(net_dyads)[[2]] := data.table(net_dyads)]
       event_network_out[date %in% thisdate, dimnames(net_triads)[[2]] := data.table(net_triads)]
+
+      ## Dyad level statistics
+      event_dyad_stats <- rbind(event_dyad_stats, comm_ties)
+
+      ## Node level statistics
+      event_indegreedist[date %in% thisdate, dimnames(indegree_dist)[[2]] := data.table(indegree_dist)]
+      event_outdegreedist[date %in% thisdate, dimnames(outdegree_dist)[[2]] := data.table(outdegree_dist)]
+      event_betweendist[date %in% thisdate, dimnames(between_dist)[[2]] := data.table(between_dist)]
+
+      ## Combine into list object for export
+      event_data <- list(event_network_out, event_dyad_stats, event_indegreedist,
+                         event_outdegreedist, event_betweendist)
+      names(event_data) <- c('netstats', 'dyadstats', 'indeg', 'outdeg', 'between')
     }
+
+    master_data[[code]] <- event_data
 
 
   }
-
-
-
-
-
-
 
 }
