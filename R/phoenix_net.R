@@ -41,8 +41,8 @@ phoenix_net <- function(start_date, end_date, level){
   ## Date objects
   if (class(start_date) %in% c('numeric', 'integer')
       | class(end_date) %in% c('numeric', 'integer')){
-    start_date <- as.Date(ymd(start_date))
-    end_date <- as.Date(ymd(end_date))
+    start_date <- as.Date(dmy(start_date))
+    end_date <- as.Date(dmy(end_date))
   }
   dates <- seq.Date(start_date, end_date, by = 'day')
   dates <- as.integer(format(dates, '%Y%m%d'))
