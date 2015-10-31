@@ -32,16 +32,17 @@
 #'
 #'  @keywords phoenix, event data
 #'
+#'  @import data.table
+#'  @import countrycode
+#'  @import reshape2
+#'  @import statnet
+#'  @import tsna
+#'  @import plyr
+#'  @import lubridate
+#'
+#'  @export
 
 phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, datasource = 'both'){
-  require(data.table)
-  require(countrycode)
-  require(reshape2)
-  require(statnet)
-  require(tsna)
-  require(plyr)
-  require(lubridate)
-
 
   ######
   #
@@ -99,18 +100,13 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   #
   ######
 
-  # Storage for daily Phoenix files
-  master_data <- vector('list', length(dates))
-  names(master_data) <- as.character(dates)
-
   # Storage for daily network objects
   master_networks <- vector('list', length(codes))
   names(master_networks) <- paste0('code', codes)
 
   ######
   #
-  # Download raw files from Phoenix data repo and ICEWS dataverse
-  #  and combine into one large data table.
+  # Download raw files from Phoenix data repo and ICEWS dataverse.
   #
   ######
 
@@ -133,15 +129,51 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   ######
   #
-  # Clean ICEWS files and format to Phoenix-style CAMEO codes
+  # Read and parse ICEWS data for merging.
   #
   ######
 
-  ## Read and parse from files
+  ## Read and parse ICEWS data
   icews_data <- ingest_icews(icews_loc)
 
-  ## Convert from ICEWS to CAMEO coding
-#   icews_data[, ]
+  ## Clean ICEWS data and format to Phoenix-style CAMEO codes
+  ##  for actors and states
+  icews_data <- icews_cameo(icews_data)
+
+  ## Subset ICEWS data to only keep key columns
+  icews_data <- icews_data[, list(date, sourceactorentity
+                                  , targetactorentity, rootcode
+                                  , eventcode)]
+
+  ######
+  #
+  # Read and parse Phoenix data for merging.
+  #
+  ######
+
+  ## Read and parse Phoenix data
+  phoenix_data <- ingest_phoenix(phoenix_loc)
+
+  ## Subset Phoenix data to only keep key columns
+  phoenix_data <- phoenix_data[, list(date, sourceactorentity
+                                      , targetactorentity, rootcode
+                                      , eventcode)]
+
+  ## Coerce Phoenix rootcode/eventcode columns to numeric - there are a few typos
+  phoenix_data[, rootcode := as.integer(rootcode)]
+  phoenix_data <- phoenix_data[!is.na(eventrootcode)]
+  phoenix_data[, eventcode := as.numeric(eventcode)]
+  phoenix_data <- phoenix_data[!is.na(eventcode)]
+
+  ######
+  #
+  # Combine ICEWS and Phoenix data
+  #
+  ######
+
+  master_data <- rbind(icews_data, phoenix_data)
+  setkeyv(master_data, c('date', 'sourceactorentity'
+                         , 'targetactorentity', 'rootcode'))
 
   ######
   #
@@ -150,27 +182,15 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   #
   ######
 
-  ## Coerce eventrootcode/eventcode columns to numeric - there are a few typos
-  master_data[, eventrootcode := as.numeric(eventrootcode)]
-  master_data <- master_data[!is.na(eventrootcode)]
-  master_data[, eventcode := as.numeric(eventcode)]
-  master_data <- master_data[!is.na(eventcode)]
-
   ## Subset events and columns: only events that:
-  # 1. involve specified actor set on both side (as ENTITIES)
-  # 2. involve TWO DIFFERENT actors (i.e. no self-interactions)
-  # and only USEFUL columns
+  ##  1. involve specified actor set on both side (as ENTITIES)
+  ##  2. involve TWO DIFFERENT actors (i.e. no self-interactions)
   master_data <- master_data[(sourceactorentity %in% actors
                               & targetactorentity %in% actors)
-                          & (sourceactorrole %in% 'GOV'
-                             | is.na(sourceactorrole))
-                          & (targetactorrole %in% 'GOV'
-                             | is.na(targetactorrole))
-                          & sourceactorentity != targetactorentity
-                          , list(date, sourceactorentity, targetactorentity
-                                , eventrootcode, eventcode)]
-  setkeyv(master_data, c('date', 'sourceactorentity'
-                         , 'targetactorentity', 'eventrootcode'))
+                          | (sourceactorentity %in% paste0(actors, 'GOV')
+                             & targetactorentity %in% paste0(actors, 'GOV'))
+                          | (sourceactorentity %in% paste0(actors, 'MIL')
+                             & targetactorentity %in% paste0(actors, 'MIL'))]
 
   ## Subset columns: drop unused event column
   if(level == 'rootcode'){

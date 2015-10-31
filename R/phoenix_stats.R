@@ -13,17 +13,20 @@
 #'          statistics for daily event-networks.
 #'
 #'  @keywords phoenix, event data
+#'
+#'  @import data.table
+#'  @import countrycode
+#'  @import reshape2
+#'  @import statnet
+#'  @import tsna
+#'  @import plyr
+#'  @import lubridate
+#'  @import igraph
+#'  @import intergraph
+#'
+#'  @export
 
 phoenix_stats <- function(dailynets){
-  require(data.table)
-  require(countrycode)
-  require(reshape2)
-  require(statnet)
-  require(tsna)
-  require(plyr)
-  require(lubridate)
-  require(igraph)
-  require(intergraph)
 
   ######
   #
