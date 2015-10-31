@@ -15,14 +15,25 @@
 #'          'Eventcode' creates a network for each of the 226 sub-codes in
 #'          CAMEO. 'Rootcode' creates a network for each of the 20 event
 #'          root codes in CAMEO.
+#'  @param phoenix_loc folder containing Phoenix data sets as daily .csv
+#'          data tables. Automatically checks for new data sets each time
+#'          the function is run, and downloads new daily data as it becomes
+#'          available. Currently in 'one-and'done' format
+#'          where it downloads the first time, and checks thereafter.
+#'  @param icews_loc folder containing ICEWS data sets as daily .tab data
+#'          tables. Because I don't know how to work a SWORD API, these will
+#'          need to be manually downloaded and updated.
+#'  @param datasource source of event data ('phoenix', 'icews', or 'both').
+#'          Corresponds to the data source used to gather raw data.
+#'          Currently defaults to 'both', as Phoenix archives  only go
+#'          back to mid-2014. Currently not used.
 #'
 #'  @return master_networks a LIST object containing daily event-networks.
 #'
 #'  @keywords phoenix, event data
 #'
 
-phoenix_net <- function(start_date, end_date, level){
-
+phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, datasource = 'both'){
   require(data.table)
   require(countrycode)
   require(reshape2)
@@ -98,34 +109,39 @@ phoenix_net <- function(start_date, end_date, level){
 
   ######
   #
-  # Download raw files from Phoenix data set and combine into one
-  #  large data table. This avoids accidental double-counting of
-  #  events that happen on day A but are reported on day B.
+  # Download raw files from Phoenix data repo and ICEWS dataverse
+  #  and combine into one large data table.
   #
   ######
 
-  for(date in dates){
-    temp <- tempfile()
-    try(
-      {
-        download.file(paste0(
-          'https://s3.amazonaws.com/openeventdata/current/events.full.'
-          , date, '.txt.zip'),temp)
-        data <- data.table(read.table(unz(temp, paste('events.full.', date
-                                                      , '.txt', sep = ''))
-                                      , header = F, fill = T, sep = '\t'
-                                      , quote = "", na.string = ''
-                                      , stringsAsFactor = F))
-        setnames(data, headers)
-        master_data[as.character(date)] <- list(data)
-      }
-    , silent = T
-    )
-    unlink(temp)
+  ## Download new Phoenix data tables. This will download the entire
+  ##  archive the first time this function is run and fully populate
+  ##  the destination folder.
+  devtools::install_github('jrhammond/phoxy')
+  library(phoxy)
+  phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
+
+  ## Check to see if ICEWS folder exists and that it has at least one 'valid'
+  ##  ICEWS data table stored.
+  icews_checkfile <- 'events.2000.20150313082808.tab'
+  icews_files <- list.files(icews_loc)
+  if(!icews_checkfile %in% icews_files){
+    stop('Please enter a valid path that contains the ICEWS yearly files.')
+  } else {
+    message('ICEWS file location is valid.')
   }
 
-  ## Convert list of data.tables to single large table
-  master_data <- data.table(rbindlist(master_data))
+  ######
+  #
+  # Clean ICEWS files and format to Phoenix-style CAMEO codes
+  #
+  ######
+
+  ## Read and parse from files
+  icews_data <- ingest_icews(icews_loc)
+
+  ## Convert from ICEWS to CAMEO coding
+#   icews_data[, ]
 
   ######
   #

@@ -13,11 +13,8 @@
 #'          statistics for daily event-networks.
 #'
 #'  @keywords phoenix, event data
-#'
-#'
 
 phoenix_stats <- function(dailynets){
-
   require(data.table)
   require(countrycode)
   require(reshape2)
@@ -224,3 +221,4 @@ phoenix_stats <- function(dailynets){
 
   return(master_data)
 }
+
