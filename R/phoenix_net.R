@@ -228,7 +228,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   for(this_code in codes){
 
-    ## Subset by code
+    ## Subset by root/event code
     event_data <- master_data[code %in% this_code]
 
     ## Create temporary storage list for code/day networks
