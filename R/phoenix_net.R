@@ -65,15 +65,6 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   actors <- as.factor(sort(actors))
   n <- length(actors)
 
-  ## Set up column headers (raw files are headless) and date range
-  headers <- c('eventid', 'date', 'year', 'month', 'day'
-               , 'sourceactorfull', 'sourceactorentity', 'sourceactorrole'
-               , 'sourceactorattribute', 'targetactorfull', 'targetactorentity'
-               , 'targetactorrole', 'targetactorattribute', 'eventcode'
-               , 'rootcode', 'pentaclass', 'goldsteinscore', 'issues'
-               , 'lat', 'long', 'locationname', 'statename', 'countrycode'
-               , 'sentenceid', 'urls', 'newssources')
-
   ## Factor variables describing CAMEO categories
   if(level == 'rootcode'){
     codes <- factor(1:20)
@@ -163,7 +154,9 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Read and parse Phoenix data
   message('Ingesting Phoenix data...')
   message(phoenix_loc)
-  phoenix_data <- phoxy::ingest_phoenix(phoenix_loc = phoenix_loc, start_date, end_date)
+  message(start_date)
+  message(end_date)
+  phoenix_data <- ingest_phoenix(phoenix_loc = phoenix_loc, start_date = start_date, end_date = end_date)
 
   ## Subset Phoenix data to only keep key columns
   phoenix_data <- phoenix_data[, list(date, sourceactorentity
