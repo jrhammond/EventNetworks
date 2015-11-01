@@ -261,4 +261,3 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   return(master_networks)
 }
-
