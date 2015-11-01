@@ -162,7 +162,8 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   ## Read and parse Phoenix data
   message('Ingesting Phoenix data...')
-  phoenix_data <- phoxy::ingest_phoenix(phoenix_loc, start_date, end_date)
+  message(phoenix_loc)
+  phoenix_data <- phoxy::ingest_phoenix(phoenix_loc = phoenix_loc, start_date, end_date)
 
   ## Subset Phoenix data to only keep key columns
   phoenix_data <- phoenix_data[, list(date, sourceactorentity
