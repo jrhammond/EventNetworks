@@ -147,7 +147,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Clean ICEWS data and format to Phoenix-style CAMEO codes
   ##  for actors and states
   message('Munging ICEWS data...')
-  icews_data <- phoxy::icews_cameo(icews_data)
+  icews_data <- icews_cameo(icews_data)
 
   ## Subset ICEWS data to only keep key columns
   icews_data <- icews_data[, list(date, sourceactorentity
