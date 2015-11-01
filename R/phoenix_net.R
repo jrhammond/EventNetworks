@@ -110,7 +110,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ##      every time the code is run. This should be cleaned up, but I'm not
   ##      100% sure how to do so in a way that's both accurate and polite.
   message('Checking Phoenix data...')
-  devtools::install_github('jrhammond/phoxy')
+#   devtools::install_github('jrhammond/phoxy')
   library(phoxy)
   phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
 
