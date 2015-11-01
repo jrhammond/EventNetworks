@@ -114,10 +114,18 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Download new Phoenix data tables. This will download the entire
   ##  archive the first time this function is run and fully populate
   ##  the destination folder.
+
+  ## NOTE: This currently requires a clumsy step where it reinstalls phoxy
+  ##      every time the code is run. This should be cleaned up, but I'm not
+  ##      100% sure how to do so in a way that's both accurate and polite.
+  message('Checking Phoenix data...')
+  devtools::install_github('jrhammond/phoxy')
+  library(phoxy)
   phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
 
   ## Check to see if ICEWS folder exists and that it has at least one 'valid'
   ##  ICEWS data table stored.
+  message('Checking ICEWS data...')
   icews_checkfile <- 'events.2000.20150313082808.tab'
   icews_files <- list.files(icews_loc)
   if(!icews_checkfile %in% icews_files){
@@ -131,14 +139,14 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   # Read and parse ICEWS data for merging.
   #
   ######
-  devtools::install_github('jrhammond/phoxy')
-  library(phoxy)
 
   ## Read and parse ICEWS data
+  message('Ingesting ICEWS data...')
   icews_data <- ingest_icews(icews_loc)
 
   ## Clean ICEWS data and format to Phoenix-style CAMEO codes
   ##  for actors and states
+  message('Munging ICEWS data...')
   icews_data <- icews_cameo(icews_data)
 
   ## Subset ICEWS data to only keep key columns
@@ -153,6 +161,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ######
 
   ## Read and parse Phoenix data
+  message('Ingesting Phoenix data...')
   phoenix_data <- ingest_phoenix(phoenix_loc)
 
   ## Subset Phoenix data to only keep key columns
