@@ -142,7 +142,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   ## Read and parse ICEWS data
   message('Ingesting ICEWS data...')
-  icews_data <- ingest_icews(icews_loc)
+  icews_data <- ingest_icews(icews_loc, start_date, end_date)
 
   ## Clean ICEWS data and format to Phoenix-style CAMEO codes
   ##  for actors and states
@@ -162,7 +162,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   ## Read and parse Phoenix data
   message('Ingesting Phoenix data...')
-  phoenix_data <- ingest_phoenix(phoenix_loc)
+  phoenix_data <- ingest_phoenix(phoenix_loc, start_date, end_date)
 
   ## Subset Phoenix data to only keep key columns
   phoenix_data <- phoenix_data[, list(date, sourceactorentity
