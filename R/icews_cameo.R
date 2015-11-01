@@ -17,13 +17,6 @@
 #'
 #'  @export
 
-#
-# load('/Users/Jesse/Dropbox/Minerva/phoenixNet/Data/agents.RData')
-# load('/Users/Jesse/Dropbox/Minerva/phoenixNet/Data/states.RData')
-# test <- fread('/Users/Jesse/Dropbox/Minerva/icews/events.1999.20150313082705.tab', na.strings = '')
-# setnames(test, c('Source Sectors', 'Target Sectors'), c('source_sectors', 'target_sectors'))
-# setnames(test, c('Source Country', 'Target Country'), c('source_state', 'target_state'))
-
 icews_cameo <- function(icews){
 
   ######
@@ -33,8 +26,8 @@ icews_cameo <- function(icews){
   #
   ######
 
-  # data(agents, environment = environment())
-  # data(states, environment = environment())
+  data(agents, environment = environment())
+  data(states, environment = environment())
 
   ######
   #
@@ -78,9 +71,9 @@ icews_cameo <- function(icews){
                  ,'IGO','MED','EDU','BUS','CRM','CVL','---')
 
   ## Tables of unique source/target sectors
-  source_table <- data.table(source_sectors = unique(icews$source_sectors)
+  source_table <- data.table(Source.Sectors = unique(icews$Source.Sectors)
                              , source_codes = NA_character_)
-  target_table <- data.table(target_sectors = unique(icews$target_sectors)
+  target_table <- data.table(Target.Sectors = unique(icews$Target.Sectors)
                              , target_codes = NA_character_)
 
   ######
@@ -90,16 +83,16 @@ icews_cameo <- function(icews){
   ######
 
   ## Convert unique source/target sector codes
-  source_table[, source_codes := ldply(source_table$source_sectors, cameo_convert)]
-  target_table[, target_codes := ldply(target_table$target_sectors, cameo_convert)]
-  icews <- merge(icews, source_table, by = 'source_sectors', all.x = T, sort = F)
-  icews <- merge(icews, target_table, by = 'target_sectors', all.x = T, sort = F)
+  source_table[, source_codes := ldply(source_table$Source.Sectors, cameo_convert)]
+  target_table[, target_codes := ldply(target_table$Target.Sectors, cameo_convert)]
+  icews <- merge(icews, source_table, by = 'Source.Sectors', all.x = T, sort = F)
+  icews <- merge(icews, target_table, by = 'Target.Sectors', all.x = T, sort = F)
 
   ## Convert unique state codes
-  setnames(states, c('source_state', 'source_isoc', 'source_cown'))
-  icews <- merge(icews, states, by = 'source_state', all.x = T, sort = F)
-  setnames(states, c('target_state', 'target_isoc', 'target_cown'))
-  icews <- merge(icews, states, by = 'target_state', all.x = T, sort = F)
+  setnames(states, c('Source.Country', 'source_isoc', 'source_cown'))
+  icews <- merge(icews, states, by = 'Source.Country', all.x = T, sort = F)
+  setnames(states, c('Target.Country', 'target_isoc', 'target_cown'))
+  icews <- merge(icews, states, by = 'Target.Country', all.x = T, sort = F)
 
   ######
   #

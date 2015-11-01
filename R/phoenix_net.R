@@ -42,6 +42,9 @@
 #'
 #'  @export
 
+devtools::install_github('jrhammond/phoxy')
+library(phoxy)
+
 phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, datasource = 'both'){
 
   ######
@@ -53,8 +56,8 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Date objects
   if (class(start_date) %in% c('numeric', 'integer')
       | class(end_date) %in% c('numeric', 'integer')){
-    start_date <- as.Date(dmy(start_date))
-    end_date <- as.Date(dmy(end_date))
+    start_date <- as.Date(lubridate::ymd(start_date))
+    end_date <- as.Date(lubridate::ymd(end_date))
   }
   dates <- seq.Date(start_date, end_date, by = 'day')
   dates <- as.integer(format(dates, '%Y%m%d'))
@@ -113,8 +116,6 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Download new Phoenix data tables. This will download the entire
   ##  archive the first time this function is run and fully populate
   ##  the destination folder.
-  devtools::install_github('jrhammond/phoxy')
-  library(phoxy)
   phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
 
   ## Check to see if ICEWS folder exists and that it has at least one 'valid'
