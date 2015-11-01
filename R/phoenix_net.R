@@ -42,8 +42,6 @@
 #'
 #'  @export
 
-devtools::install_github('jrhammond/phoxy')
-library(phoxy)
 
 phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, datasource = 'both'){
 
@@ -72,7 +70,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
                , 'sourceactorfull', 'sourceactorentity', 'sourceactorrole'
                , 'sourceactorattribute', 'targetactorfull', 'targetactorentity'
                , 'targetactorrole', 'targetactorattribute', 'eventcode'
-               , 'eventrootcode', 'pentaclass', 'goldsteinscore', 'issues'
+               , 'rootcode', 'pentaclass', 'goldsteinscore', 'issues'
                , 'lat', 'long', 'locationname', 'statename', 'countrycode'
                , 'sentenceid', 'urls', 'newssources')
 
@@ -133,6 +131,8 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   # Read and parse ICEWS data for merging.
   #
   ######
+  devtools::install_github('jrhammond/phoxy')
+  library(phoxy)
 
   ## Read and parse ICEWS data
   icews_data <- ingest_icews(icews_loc)
@@ -162,7 +162,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   ## Coerce Phoenix rootcode/eventcode columns to numeric - there are a few typos
   phoenix_data[, rootcode := as.integer(rootcode)]
-  phoenix_data <- phoenix_data[!is.na(eventrootcode)]
+  phoenix_data <- phoenix_data[!is.na(rootcode)]
   phoenix_data[, eventcode := as.numeric(eventcode)]
   phoenix_data <- phoenix_data[!is.na(eventcode)]
 
@@ -197,7 +197,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   if(level == 'rootcode'){
     master_data[, eventcode := NULL]
   } else {
-    master_data[, eventrootcode := NULL]
+    master_data[, rootcode := NULL]
   }
 
   ## Set names to generic

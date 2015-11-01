@@ -26,8 +26,8 @@ icews_cameo <- function(icews){
   #
   ######
 
-  data(agents, environment = environment())
-  data(states, environment = environment())
+  data(agents, envir = environment())
+  data(states, envir = environment())
 
   ######
   #
