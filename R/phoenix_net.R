@@ -163,7 +163,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Read and parse Phoenix data
   message('Ingesting Phoenix data...')
   phoenix_data <- ingest_phoenix(phoenix_loc, start_date, end_date)
-
+  message('...Done!')
   ## Subset Phoenix data to only keep key columns
   phoenix_data <- phoenix_data[, list(date, sourceactorentity
                                       , targetactorentity, rootcode
