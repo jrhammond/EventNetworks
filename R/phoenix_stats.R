@@ -35,7 +35,11 @@ phoenix_stats <- function(dailynets){
   ######
 
   codes <- names(dailynets)
-  ndates <- length(get.network.attribute(data1[[1]],'net.obs.period')$observations)
+  start_end <- get.network.attribute(
+    dailynets[[1]],'net.obs.period')$observations[[1]]
+  start_date <- as.Date(as.character(start_end[1]), '%Y%m%d')
+  end_date <- as.Date(as.character(start_end[2]), '%Y%m%d')
+  ndates <- length(seq.Date(start_date, end_date, 'day'))
   nodes <- network.vertex.names(dailynets[[1]])
 
   ######
@@ -52,13 +56,6 @@ phoenix_stats <- function(dailynets){
 
     ## Extract one set of daily event-networks
     event_dnet <- dailynets[[code]]
-    ## Pull date information
-    dates <- get.network.attribute(event_dnet, 'net.obs.period')$observations
-    ## NOTE: this is a stupid way but I can't figure out how to natively
-    ##  extract date-names from networkDynamic objects
-    dates <- unique(as.integer(as.vector(unlist(dates)[1:(ndates*2)])))
-    dates <- dates[!is.na(dates)]
-
 
     ######
     #
