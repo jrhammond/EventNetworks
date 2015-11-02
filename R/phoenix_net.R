@@ -98,7 +98,6 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   # Storage for comparison of Phoenix and ICEWS reporting overlap
   filler <- rep(NA, length(dates))
   sources_overlap <- data.table(date = dates
-                                , total_events = filler
                                 , phoenix_only = filler
                                 , icews_only = filler
                                 , both_sources = filler)
@@ -247,7 +246,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   sources_overlap[, icews_only := master_data[
     , sum(dup_frombot == F & source == 'icews'), by = date][,V1]]
   sources_overlap[, both_sources := master_data[, sum(dup_fromtop == T), by = date][, V1]]
-  sources_overlap[, total_events := sum(phoenix_only, icews_only, both_sources), by = date]
+#   sources_overlap[, total_events := sum(phoenix_only, icews_only, both_sources), by = date]
 
   ## Drop flags and source variable
   master_data[, dup_fromtop := NULL]
