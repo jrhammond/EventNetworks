@@ -58,7 +58,6 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
     end_date <- as.Date(lubridate::ymd(end_date))
   }
   dates <- seq.Date(start_date, end_date, by = 'day')
-  dates <- as.integer(format(dates, '%Y%m%d'))
 
   ## Actors (default to 255 ISO3C state codes)
   actors <- countrycode::countrycode_data$iso3c
@@ -95,6 +94,14 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   # Storage for daily network objects
   master_networks <- vector('list', length(codes))
   names(master_networks) <- paste0('code', codes)
+
+  # Storage for comparison of Phoenix and ICEWS reporting overlap
+  filler <- rep(NA, length(dates))
+  sources_overlap <- data.table(date = dates
+                                , total_events = filler
+                                , phoenix_only = filler
+                                , icews_only = filler
+                                , both_sources = filler)
 
   ######
   #
@@ -144,6 +151,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   icews_data <- icews_data[, list(date, sourceactorentity
                                   , targetactorentity, rootcode
                                   , eventcode)]
+  icews_data[, source := 'icews']
 
   ######
   #
@@ -153,15 +161,13 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   ## Read and parse Phoenix data
   message('Ingesting Phoenix data...')
-  message(phoenix_loc)
-  message(start_date)
-  message(end_date)
   phoenix_data <- ingest_phoenix(phoenix_loc = phoenix_loc, start_date = start_date, end_date = end_date)
 
   ## Subset Phoenix data to only keep key columns
   phoenix_data <- phoenix_data[, list(date, sourceactorentity
                                       , targetactorentity, rootcode
                                       , eventcode)]
+  phoenix_data[, source := 'phoenix']
 
   ## Coerce Phoenix rootcode/eventcode columns to numeric - there are a few typos
   phoenix_data[, rootcode := as.integer(rootcode)]
@@ -176,8 +182,6 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ######
 
   master_data <- rbind(icews_data, phoenix_data)
-  setkeyv(master_data, c('date', 'sourceactorentity'
-                         , 'targetactorentity', 'rootcode'))
 
   ######
   #
@@ -185,6 +189,9 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   # and dropping unused columns
   #
   ######
+
+  ## Subset events: keep only events within date range
+  master_data <- master_data[date %in% dates]
 
   ## Subset events and columns: only events that:
   ##  1. involve specified actor set on both side (as ENTITIES)
@@ -194,7 +201,8 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
                           | (sourceactorentity %in% paste0(actors, 'GOV')
                              & targetactorentity %in% paste0(actors, 'GOV'))
                           | (sourceactorentity %in% paste0(actors, 'MIL')
-                             & targetactorentity %in% paste0(actors, 'MIL'))]
+                           & targetactorentity %in% paste0(actors, 'MIL'))]
+  master_data <- master_data[substr(sourceactorentity, 1, 3) != substr(targetactorentity, 1, 3)]
 
   ## Subset columns: drop unused event column
   if(level == 'rootcode'){
@@ -204,21 +212,50 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   }
 
   ## Set names to generic
-  setnames(master_data, c('date', 'actora', 'actorb', 'code'))
+  setnames(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
 
-  ## Subset events: drop duplicated events/days/actors
-  master_data <- master_data[!duplicated(master_data)]
-
-  ## Subset events: keep only events within date range
-  master_data <- master_data[date %in% dates]
-  master_data <- data.table(master_data)
+  ## Set actor codes to state-level factors
+  ## NOTE: this removes differentiation of actors within states (ex: gov vs mil)
+  ##  and as such should probably be moved to an argument in the future.
+  master_data[, actora := factor(substr(actora, 1, 3), levels = levels(actors))]
+  master_data[, actorb := factor(substr(actorb, 1, 3), levels = levels(actors))]
 
   ## Set CAMEO coded event/root codes to factors
   master_data[, code := factor(code, levels = codes)]
 
-  ## Set actor codes to factors
-  master_data[, actora := factor(actora, levels = levels(actors))]
-  master_data[, actorb := factor(actorb, levels = levels(actors))]
+  ## Subset events: drop duplicated events/days/actors
+  master_data <- master_data[!duplicated(master_data)]
+
+  ## Set keys
+  setkeyv(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
+
+  ######
+  #
+  # Export : how much overlap between Phoenix and ICEWS reporting?
+  #
+  ######
+
+  ## Create some temporary flag variables
+  master_data[, dup_fromtop := duplicated(
+    master_data[, list(date, actora, actorb, code)])]
+  master_data[, dup_frombot := duplicated(
+    master_data[, list(date, actora, actorb, code)], fromLast = T)]
+
+  ## Export data on reporting overlap
+  sources_overlap[, phoenix_only := master_data[
+    , sum(dup_fromtop == F & source == 'phoenix'), by = date][,V1]]
+  sources_overlap[, icews_only := master_data[
+    , sum(dup_frombot == F & source == 'icews'), by = date][,V1]]
+  sources_overlap[, both_sources := master_data[, sum(dup_fromtop == T), by = date][, V1]]
+  sources_overlap[, total_events := sum(phoenix_only, icews_only, both_sources), by = date]
+
+  ## Drop flags and source variable
+  master_data[, dup_fromtop := NULL]
+  master_data[, dup_frombot := NULL]
+  master_data[, source := NULL]
+
+  ## Drop duplicated variables
+  master_data <- unique(master_data)
 
   ######
   #
@@ -228,7 +265,6 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   #
   ######
 
-
   for(this_code in codes){
 
     ## Subset by root/event code
@@ -236,13 +272,14 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
     ## Create temporary storage list for code/day networks
     code_networks <- vector('list', length(dates))
-    names(code_networks) <- paste0('date', dates)
+    names(code_networks) <- paste0('date', as.integer(dates))
 
     for(today in dates){
       ## Pull today's network multiplex
       daily_data <- event_data[date %in% today]
 
       ## Initialize the network size and characteristics
+
       event_net <- network.initialize(n = n, directed = T, loops = F)
       network.vertex.names(event_net) <- levels(actors)
 
@@ -255,7 +292,8 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
     ## Collapse to TSNA dynamic-network object
     temporal_codenet <- networkDynamic(network.list = code_networks
-                                       , onsets = dates, termini = dates
+                                       , onsets = as.integer(dates)
+                                       , termini = as.integer(dates)
                                        , verbose = F)
 
     ## Store list in master network list
