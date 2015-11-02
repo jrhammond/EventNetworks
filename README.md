@@ -1,19 +1,27 @@
-phoenixNet
+`phoenixNet`
 =====
 
-Download, munge, and transform Phoenix auto-coded event data to daily event-networks.
+Download, munge, and transform Phoenix and ICEWS auto-coded event data to daily event-networks.
 
-'phoenixNet' includes a small set of functions that download a specified range of daily
-event files from the Phoenix data storage (http://phoenixdata.org/data/current), 
-process the data to remove possible duplicate events, subset by actors to focus on
-interactions between state governments, and convert the resulting data to a set of daily 
-event-networks by event code or event root code. These event-networks can then be analyzed
-to return a large array of daily network-level, dyad-level, and node-level statistics.
+`phoenixNet` includes a set of functions designed to gather event data, format and munge
+these data, convert them into daily networks of interactions between states in the 
+international system, and return a large set of network-level, dyad-level, and node-level
+statistics over time. 
 
-Please note: this tool does not (currently) save the raw Phoenix daily files to disk.
-If you are interested in acquiring and saving the raw data to plot or analyze as 
-events rather than network ties, I suggest using the excellent `phoxy' package created
-by [Andrew Halterman](https://github.com/ahalterman/phoxy) at Caerus Associates.
+These functions rely on the public release of the [ICEWS data](https://dataverse.harvard.edu/dataverse/harvard?q=icews) for events occurring between 
+1995 and October of 2014. For events occurring from June 2014 through the present, they
+utilize the [Phoenix daily data sets](http://phoenixdata.org/data/current) created and
+released through the [Open Event Data Project](http://openeventdata.org). Note that this
+means there are some time periods (currently June-October 2014) where events will be constructed
+using *both* Phoenix and ICEWS; in these cases, deduplication is used to minimize double-reporting
+of events.
+
+The main function 'phoenix_net' intakes raw data files. It will look for them on disk, intaking
+the paths of Phoenix and ICEWS files separately. Due to API issues, these data are treated differently:
+- If Phoenix data are not found in the source path, they are downloaded and saved automatically. This is
+done using [Andrew Halterman's](https://github.com/ahalterman/phoxy) excellent `phoxy` package.
+- ICEWS data have to be downloaded manually and stored on disk to be used in the functions. Hopefully,
+this will be fixed soon once I better understand the new version of the Harvard Dataverse API.
 
 The current development of the Phoenix Data Project is a collaborative effort between 
 Caerus Associates (Erin Simpson, Andrew Halterman, and John Beieler), Parus Analytics 
