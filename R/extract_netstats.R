@@ -77,10 +77,9 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
   share_crossings <- sum(crossing(ic, daily_graph) == T) /
     length(crossing(ic, daily_graph))
 
+  ## Output network stats
   return(c(net_degree, net_density, net_trans, ic_mod
            , num_ic, meansize_ic
            , share_crossings, net_dyads, net_triads))
 
 }
-foo <- c(20100101, 20100102)
-ldply(foo, extract_netstats, input_net = dailynets$code4)
