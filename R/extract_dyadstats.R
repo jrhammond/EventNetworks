@@ -34,7 +34,7 @@ extract_dyadstats <- function(input_date = this_date, input_net = tsna_obj){
   ## Collapse to daily network
   net_obj <- network.collapse(input_net, at = input_date)
   ## Convert to igraph object via 'intergraph' for additional metrics
-  daily_graph <- asIgraph(net_obj)
+  daily_graph <- intergraph::asIgraph(net_obj)
 
   ######
   #
@@ -42,8 +42,15 @@ extract_dyadstats <- function(input_date = this_date, input_net = tsna_obj){
   #
   ######
 
+  ## Community detection
+  ic <- igraph::infomap.community(daily_graph)
+
   ## Get community membership
-  ic_membership <- membership(ic)
+  ic_membership <- igraph::membership(ic)
+
+  ## Number and size of N>1 communities detected
+  num_ic <- length(igraph::sizes(ic)[igraph::sizes(ic) > 1])
+  size_ic <- sort(igraph::sizes(ic)[igraph::sizes(ic) > 1], decreasing = T)
 
   ## Convert to edgelist
   comm_ids <- (ic_membership[ic_membership %in% names(size_ic)])
@@ -73,6 +80,3 @@ extract_dyadstats <- function(input_date = this_date, input_net = tsna_obj){
 
   return(comm_ties)
 }
-
-foo <- c(20100101, 20100102)
-test <- ldply(foo, extract_dyadstats, input_net = dailynets$code4)

@@ -37,9 +37,12 @@ phoenix_stats <- function(dailynets){
   codes <- names(dailynets)
   start_end <- get.network.attribute(
     dailynets[[1]],'net.obs.period')$observations[[1]]
-  start_date <- as.Date(as.character(start_end[1]), '%Y%m%d')
-  end_date <- as.Date(as.character(start_end[2]), '%Y%m%d')
-  ndates <- length(seq.Date(start_date, end_date, 'day'))
+  start_date_int <- start_end[1]
+  end_date_int <- start_end[2]
+  start_date <- as.Date(as.character(start_date_int), format = '%Y%m%d')
+  end_date <- as.Date(as.character(end_date_int), format = '%Y%m%d')
+  dates <- as.integer(format(seq.Date(start_date, end_date, 'day'), '%Y%m%d'))
+  ndates <- length(dates)
   nodes <- network.vertex.names(dailynets[[1]])
 
   ######
@@ -57,165 +60,13 @@ phoenix_stats <- function(dailynets){
     ## Extract one set of daily event-networks
     event_dnet <- dailynets[[code]]
 
-    ######
-    #
-    # Set up some empty storage objects
-    #
-    ######
-
-    # Table to store network-level stats
-    event_network_stats <- data.table('date' = dates)
-
-    # Table to store dyad-level stats
-    event_dyad_stats <- data.table('date' = integer(), 'nodea' = integer()
-                                   , 'nodeb' = integer())
-
-    # Tables to store dyad-level stats
-    event_indegreedist <- data.table('date' = dates)
-    event_outdegreedist <- data.table('date' = dates)
-    event_betweendist <- data.table('date' = dates)
-
-    # Storage objects for irregular network-level data
-    event_network_communities <- vector('list', length(dates))
-    names(event_network_communities) <- as.character(dates)
-
-    for(thisdate in dates){
-      ## Pull one date's network
-      daily_net <- network.collapse(event_dnet, at = thisdate)
-
-      ## Convert to igraph object via 'intergraph' for additional metrics
-      daily_graph <- asIgraph(daily_net)
-
-      ######
-      #
-      # Extract a set of NETWORK-LEVEL statistics
-      #
-      ######
-
-      ## Mean degree
-      # Since it's a mean, in- vs out-degree doesn't matter
-      net_degree <- mean(sna::degree(as.matrix.network(daily_net), gmode = 'digraph'))
-
-      ## Density
-      net_density <- network.density(daily_net)
-
-      ## Transitivity
-      net_trans <- gtrans(daily_net, diag =  F, mode = 'digraph')
-
-      ## Dyad census
-      net_dyads <- sna::dyad.census(as.matrix.network(daily_net))
-      dimnames(net_dyads)[[2]] <- paste0('dyad', dimnames(net_dyads)[[2]])
-
-      ## Triad census
-      net_triads <- sna::triad.census(as.matrix.network(daily_net), mode = 'digraph')
-      dimnames(net_triads)[[2]] <- paste0('triad', dimnames(net_triads)[[2]])
-
-      ## Community detection
-      ic <- infomap.community(daily_graph)
-
-      ## Network community modularity
-      ic_mod <- modularity(ic)
-
-      ## Number and size of N>1 communities detected
-      num_ic <- length(sizes(ic)[sizes(ic) > 1])
-      size_ic <- sort(sizes(ic)[sizes(ic) > 1], decreasing = T)
-
-      ## Mean community size of N>1 communities
-      meansize_ic <- mean(size_ic)
-
-      ## Share of total ties that connect different communities
-      share_crossings <- sum(crossing(ic, daily_graph) == T) /
-        length(crossing(ic, daily_graph))
-
-      ######
-      #
-      # Extract a set of DYAD-LEVEL statistics
-      #
-      ######
-
-      ## Dyad-level shared-community indicator
-      # Get membership
-      ic_membership <- membership(ic)
-      # Convert to edgelist
-      comm_ids <- (ic_membership[ic_membership %in% names(size_ic)])
-      comm_members <- which(ic_membership %in% comm_ids)
-      comm_edgelist <- cbind(comm_ids, comm_members)
-      # Convert to bimodal adjacency matrix
-      comm_membership <- matrix(0, length(unique(comm_ids)), 255)
-      rownames(comm_membership) <- unique(comm_ids)
-      colnames(comm_membership) <- 1:255
-      comm_membership[comm_edgelist] <- 1
-      # Matrix multiply to get shared membership matrix
-      comm_adj <-  t(comm_membership) %*% comm_membership
-
-      # Convert to daily edgelist
-      comm_try <- try({
-        comm_ties <- data.table(thisdate, which(comm_adj == 1, arr.ind = T))
-        }, silent = T)
-      if(class(comm_try)[1] == 'try-error'){
-        comm_ties <- data.table('thisdate' = integer(), 'nodea' = integer()
-                                , 'nodeb' = integer())
-      }
-      setnames(comm_ties, c('date', 'nodea', 'nodeb'))
-      comm_ties <- comm_ties[nodea != nodeb]
-      setkeyv(comm_ties, c('nodea', 'nodeb'))
-
-      ######
-      #
-      # Extract a set of NODE-LEVEL statistics
-      #
-      ######
-
-      ## Degree
-      # Indegree
-      indegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'indegree'
-                                   , rescale = T), nrow = 1)
-      indegree_dist[is.nan(indegree_dist)] <- 0
-      dimnames(indegree_dist)[[2]] <- nodes
-      # Outdegree
-      outdegree_dist <- matrix(sna::degree(as.matrix.network(daily_net), cmode = 'outdegree'
-                                    , rescale = T), nrow = 1)
-      outdegree_dist[is.nan(outdegree_dist)] <- 0
-      dimnames(outdegree_dist)[[2]] <- nodes
-
-      ## Betweenness
-      between_dist <- matrix(sna::betweenness(as.matrix.network(daily_net), gmode = 'digraph'
-                                  , rescale = T), nrow = 1)
-      between_dist[is.nan(between_dist)] <- 0
-      dimnames(between_dist)[[2]] <- nodes
-
-
-      ######
-      #
-      # Stuff all these stats into output objects
-      #
-      ######
-
-      ## Network level statistics
-      event_network_stats[date %in% thisdate, mean_degree := net_degree]
-      event_network_stats[date %in% thisdate, density := net_density]
-      event_network_stats[date %in% thisdate, modularity := ic_mod]
-      event_network_stats[date %in% thisdate, num_communities := num_ic]
-      event_network_stats[date %in% thisdate, mean_commsize := meansize_ic]
-      event_network_stats[date %in% thisdate, cross_tieshare := share_crossings]
-      event_network_stats[date %in% thisdate, dimnames(net_dyads)[[2]] := data.table(net_dyads)]
-      event_network_stats[date %in% thisdate, dimnames(net_triads)[[2]] := data.table(net_triads)]
-
-      ## Dyad level statistics
-      event_dyad_stats <- rbind(event_dyad_stats, comm_ties)
-
-      ## Node level statistics
-      event_indegreedist[date %in% thisdate, dimnames(indegree_dist)[[2]] := data.table(indegree_dist)]
-      event_outdegreedist[date %in% thisdate, dimnames(outdegree_dist)[[2]] := data.table(outdegree_dist)]
-      event_betweendist[date %in% thisdate, dimnames(between_dist)[[2]] := data.table(between_dist)]
-
-      ## Combine into list object for export
-      event_data <- list(event_network_stats, event_dyad_stats, event_indegreedist,
-                         event_outdegreedist, event_betweendist)
-      names(event_data) <- c('netstats', 'dyadstats', 'indeg', 'outdeg', 'between')
-    }
-
-    master_data[[code]] <- event_data
+    ## Extract network-level statistics
+    master_data[[code]]$netstats <- data.table(
+      plyr::ldply(dates, extract_netstats, input_net = event_dnet))
+    master_data[[code]]$dyadstats <-  data.table(
+      plyr::ldply(dates, extract_dyadstats, input_net = event_dnet))
+    master_data[[code]]$nodestats <-  data.table(
+      plyr::ldply(dates, extract_nodestats, input_net = event_dnet))
 
   }
 

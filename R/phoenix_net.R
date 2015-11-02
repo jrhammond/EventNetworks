@@ -325,5 +325,5 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   }
 
-  return(list(sources_overlap, master_networks))
+  return(list(diagnostics = sources_overlap, dailynets = master_networks))
 }

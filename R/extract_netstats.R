@@ -34,7 +34,7 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
   ## Collapse to daily network
   net_obj <- network.collapse(input_net, at = input_date)
   ## Convert to igraph object via 'intergraph' for additional metrics
-  daily_graph <- asIgraph(net_obj)
+  daily_graph <- intergraph::asIgraph(net_obj)
 
   ######
   #
@@ -61,21 +61,21 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
   dimnames(net_triads)[[2]] <- paste0('triad', dimnames(net_triads)[[2]])
 
   ## Community detection
-  ic <- infomap.community(daily_graph)
+  ic <- igraph::infomap.community(daily_graph)
 
   ## Network community modularity
-  ic_mod <- modularity(ic)
+  ic_mod <- igraph::modularity(ic)
 
   ## Number and size of N>1 communities detected
-  num_ic <- length(sizes(ic)[sizes(ic) > 1])
-  size_ic <- sort(sizes(ic)[sizes(ic) > 1], decreasing = T)
+  num_ic <- length(igraph::sizes(ic)[igraph::sizes(ic) > 1])
+  size_ic <- sort(igraph::sizes(ic)[igraph::sizes(ic) > 1], decreasing = T)
 
   ## Mean community size of N>1 communities
   meansize_ic <- mean(size_ic)
 
   ## Share of total ties that connect different communities
-  share_crossings <- sum(crossing(ic, daily_graph) == T) /
-    length(crossing(ic, daily_graph))
+  share_crossings <- sum(igraph::crossing(ic, daily_graph) == T) /
+    length(igraph::crossing(ic, daily_graph))
 
   ## Output network stats
   return(c(net_degree, net_density, net_trans, ic_mod
