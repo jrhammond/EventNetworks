@@ -301,5 +301,5 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
     master_networks[paste0('code', this_code)] <- list(temporal_codenet)
   }
 
-  return(master_networks)
+  return(list(sources_overlap, master_networks))
 }
