@@ -265,6 +265,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   #
   ######
 
+  dates_ref <- as.integer(format(dates, '%Y%m%d'))
   for(this_code in codes){
 
     ## Subset by root/event code
@@ -272,14 +273,14 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
     ## Create temporary storage list for code/day networks
     code_networks <- vector('list', length(dates))
-    names(code_networks) <- paste0('date', as.integer(dates))
+    names(code_networks) <- paste0('date', dates_ref)
 
     for(today in dates){
+      date_ref <- dates_ref[which(dates %in% today)]
       ## Pull today's network multiplex
       daily_data <- event_data[date %in% today]
 
       ## Initialize the network size and characteristics
-
       event_net <- network.initialize(n = n, directed = T, loops = F)
       network.vertex.names(event_net) <- levels(actors)
 
@@ -287,13 +288,13 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
       add.edges(event_net, tail = daily_data$actora, head = daily_data$actorb)
 
       ## Store in network list
-      code_networks[paste0('date', today)] <- list(event_net)
+      code_networks[paste0('date', date_ref)] <- list(event_net)
     }
 
     ## Collapse to TSNA dynamic-network object
     temporal_codenet <- networkDynamic(network.list = code_networks
-                                       , onsets = as.integer(dates)
-                                       , termini = as.integer(dates)
+                                       , onsets = dates_ref
+                                       , termini = dates_ref
                                        , verbose = F)
 
     ## Store list in master network list
