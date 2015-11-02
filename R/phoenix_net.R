@@ -241,11 +241,27 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
     master_data[, list(date, actora, actorb, code)], fromLast = T)]
 
   ## Export data on reporting overlap
-  sources_overlap[, phoenix_only := master_data[
-    , sum(dup_fromtop == F & source == 'phoenix'), by = date][,V1]]
-  sources_overlap[, icews_only := master_data[
-    , sum(dup_frombot == F & source == 'icews'), by = date][,V1]]
-  sources_overlap[, both_sources := master_data[, sum(dup_fromtop == T), by = date][, V1]]
+  # Phoenix reporting only
+  dates_tab <- data.table(date = dates)
+  phoenix_only <- master_data[, sum(dup_fromtop == F
+                                    & source == 'phoenix'), by = date]
+  phoenix_only <- merge(dates_tab, phoenix_only, by = 'date', all.x = T)
+  phoenix_only[is.na(V1), V1 := 0]
+  sources_overlap$phoenix_only <- phoenix_only$V1
+
+  # ICEWS reporting only
+  icews_only <- master_data[, sum(dup_frombot == F
+                                  & source == 'icews'), by = date]
+  icews_only <- merge(dates_tab, icews_only, by = 'date', all.x = T)
+  icews_only[is.na(V1), V1 := 0]
+  sources_overlap$icews_only <- icews_only$V1
+
+  # Both sources report
+  both_sources <- master_data[, sum(dup_fromtop == T), by = date]
+  both_sources <- merge(dates_tab, both_sources, by = 'date', all.x = T)
+  both_sources[is.na(V1), V1 := 0]
+  sources_overlap$both_sources <- both_sources$V1
+
 
   ## Drop flags and source variable
   master_data[, dup_fromtop := NULL]
