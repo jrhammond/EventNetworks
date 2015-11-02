@@ -255,6 +255,10 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Drop duplicated variables
   master_data <- unique(master_data)
 
+  ## Format for networkDynamic creation
+  master_data[, end_date := date]
+  setcolorder(master_data, c('date', 'end_date', 'actora', 'actorb', 'code'))
+
   ######
   #
   # For each time period in the specified range, subset the master data set,
@@ -267,36 +271,42 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   for(this_code in codes){
 
     ## Subset by root/event code
-    event_data <- master_data[code %in% this_code]
+    event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb)]
 
-    ## Create temporary storage list for code/day networks
-    code_networks <- vector('list', length(dates))
-    names(code_networks) <- paste0('date', dates_ref)
-
-    for(today in dates){
-      date_ref <- dates_ref[which(dates %in% today)]
-      ## Pull today's network multiplex
-      daily_data <- event_data[date %in% today]
+    if(nrow(event_data) > 0){
+      event_data[, date := as.integer(format(date, '%Y%m%d'))]
+      event_data[, end_date := as.integer(format(end_date, '%Y%m%d'))]
+      event_data[, actora := as.integer(actora)]
+      event_data[, actorb := as.integer(actorb)]
 
       ## Initialize the network size and characteristics
       event_net <- network.initialize(n = n, directed = T, loops = F)
       network.vertex.names(event_net) <- levels(actors)
 
-      ## Add edges based on dyadic ties
-      add.edges(event_net, tail = daily_data$actora, head = daily_data$actorb)
-
-      ## Store in network list
-      code_networks[paste0('date', date_ref)] <- list(event_net)
+      ## Generate networkDynamic object
+      net_period <- list(observations = list(c(min(dates_ref), max(dates_ref)))
+                         , mode = 'discrete', time.increment = 1
+                         , time.unit = 'step')
+      temporal_codenet <- networkDynamic(base.net = event_net
+                                         , edge.spells = event_data
+                                         , net.obs.period = net_period
+                                         , verbose = F)
+      ## Store list in master network list
+      master_networks[paste0('code', this_code)] <- list(temporal_codenet)
+    } else {
+      ## Generate networkDynamic object
+      net_period <- list(observations = list(c(min(dates_ref), max(dates_ref)))
+                         , mode = 'discrete', time.increment = 1
+                         , time.unit = 'step')
+      temporal_codenet <- network.initialize(n = n, directed = T, loops = F)
+      network.vertex.names(temporal_codenet) <- levels(actors)
+      activate.vertices(temporal_codenet, onset = min(dates_ref), terminus = max(dates_ref))
+      set.network.attribute(temporal_codenet, 'net.obs.period', net_period)
     }
-
-    ## Collapse to TSNA dynamic-network object
-    temporal_codenet <- networkDynamic(network.list = code_networks
-                                       , onsets = dates_ref
-                                       , termini = dates_ref
-                                       , verbose = F)
 
     ## Store list in master network list
     master_networks[paste0('code', this_code)] <- list(temporal_codenet)
+
   }
 
   return(list(sources_overlap, master_networks))
