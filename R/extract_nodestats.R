@@ -33,6 +33,7 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
 
   ## Collapse to daily network
   net_obj <- network.collapse(input_net, at = input_date)
+  nodes <- network.vertex.names(net_obj)
   ## Convert to igraph object via 'intergraph' for additional metrics
   daily_graph <- intergraph::asIgraph(net_obj)
 
@@ -43,7 +44,11 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
   ######
 
   ## Transitivity
-  trans_dist <- igraph::transitivity(daily_graph)
+  trans_dist <- matrix(igraph::transitivity(daily_graph, type = 'local'
+                                            , isolates = 'zero'), nrow = 1)
+  dimnames(trans_dist)[[2]] <- nodes
+  trans_dist <- as.data.table(cbind(date = input_date
+                                    , node_stat = 'trans', trans_dist))
 
   ## Degree
   # Indegree
@@ -52,12 +57,17 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
                                       , rescale = T), nrow = 1)
   indegree_dist[is.nan(indegree_dist)] <- 0
   dimnames(indegree_dist)[[2]] <- nodes
+  indegree_dist <- as.data.table(cbind(date = input_date
+                                       , node_stat = 'indegree', indegree_dist))
+
   # Outdegree
   outdegree_dist <- matrix(sna::degree(as.matrix.network(input_net)
                                        , cmode = 'outdegree'
                                        , rescale = T), nrow = 1)
   outdegree_dist[is.nan(outdegree_dist)] <- 0
   dimnames(outdegree_dist)[[2]] <- nodes
+  outdegree_dist <- as.data.table(cbind(date = input_date
+                                        , node_stat = 'outdegree', outdegree_dist))
 
   ## Betweenness
   between_dist <- matrix(sna::betweenness(as.matrix.network(input_net)
@@ -65,9 +75,10 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
                                           , rescale = T), nrow = 1)
   between_dist[is.nan(between_dist)] <- 0
   dimnames(between_dist)[[2]] <- nodes
+  between_dist <- as.data.table(cbind(date = input_date
+                                      , node_stat = 'between', between_dist))
 
-  return(c(indegree_dist, outdegree_dist, between_dist))
+
+  return(data.table(rbind(trans_dist, indegree_dist
+                         , outdegree_dist, between_dist)))
 }
-
-# foo <- c(20100101, 20100102)
-# test <- ldply(foo, extract_nodestats, input_net = dailynets$code4)
