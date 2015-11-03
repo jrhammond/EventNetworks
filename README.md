@@ -43,7 +43,10 @@ Usage
 'phoenixNet' contains the following functions:
 
 * 'phoenix_net' intakes a start date, end date, and event aggregation level
-  as arguments, and outputs a list of dynamic network objects (tsna::networkDynamic). 
+  as arguments, along with a pair of file directories containing Phoenix and ICEWS
+  data sets as tabular files. This function outputs a two-element list of data. The
+  first element is a data.table object giving daily event counts and overlapping reports
+  between the two data sets. The second is a list of dynamic network objects (tsna::networkDynamic). 
   Each dynamic network describes daily interactions along one CAMEO-coded event category
   or event root category between the 255 ISO-coded states in the international system. 
   These are directed, binarized (1/0) networks, in which a tie between two states i and j
