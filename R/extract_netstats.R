@@ -34,7 +34,21 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
   ## Collapse to daily network
   net_obj <- network.collapse(input_net, at = input_date)
   if(network::network.edgecount(net_obj) == 0){
-    return(data.table(date = input_date))
+    return(data.table(date = input_date
+           , net_degree = 0, net_density = 0
+           , net_trans = 0, net_modularity = 0
+           , num_communities = 0, comm_meansize = 0
+           , xcomm_ties = 0
+           , dyads_mut = 0, dyads_asym = 0
+           , dyads_null = 0
+           , triads_003 = 0, triads_012 = 0
+           , triads_102 = 0, triads_021D = 0
+           , triads_021U = 0, triads_021C = 0
+           , triads_111D = 0, triads_111U = 0
+           , triads_030T = 0, triads_030C = 0
+           , triads_201 = 0, triads_120D = 0
+           , triads_120U = 0, triads_120C = 0
+           , triads_210 = 0, triads_300 = 0))
   }
   ## Convert to igraph object via 'intergraph' for additional metrics
   daily_graph <- intergraph::asIgraph(net_obj)

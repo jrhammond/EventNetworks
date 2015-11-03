@@ -33,6 +33,22 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
 
   ## Collapse to daily network
   net_obj <- network.collapse(input_net, at = input_date)
+
+  ## Write a weird little workaround for the final day of an empty tsna
+  ##  object: by default it is a zero-node network, which is odd.
+  if(network.size(net_obj) == 0){
+    filler <- matrix(rep(0, 255), nrow = 1)
+    dimnames(filler)[[2]] <- nodes
+    return(rbind(as.data.table(cbind(date = input_date
+                                      , node_stat = 'trans', filler))
+                 , as.data.table(cbind(date = input_date
+                                      , node_stat = 'indegree', filler))
+                 , as.data.table(cbind(date = input_date
+                                      , node_stat = 'outdegree', filler))
+                 , as.data.table(cbind(date = input_date
+                                      , node_stat = 'between', filler))))
+  }
+
   nodes <- network.vertex.names(net_obj)
   ## Convert to igraph object via 'intergraph' for additional metrics
   daily_graph <- intergraph::asIgraph(net_obj)
