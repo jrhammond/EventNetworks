@@ -13,15 +13,17 @@ These functions rely on the public release of the [ICEWS data](https://dataverse
 utilize the [Phoenix daily data sets](http://phoenixdata.org/data/current) created and
 released through the [Open Event Data Project](http://openeventdata.org). Note that this
 means there are some time periods (currently June-October 2014) where events will be constructed
-using *both* Phoenix and ICEWS; in these cases, deduplication is used to minimize double-reporting
-of events.
+using *both* Phoenix and ICEWS; in these cases, event records are de-duplicated and some diagnostics
+are reported showing the level of overlap between the two data sources.
 
 The main function 'phoenix_net' intakes raw data files. It will look for them on disk, intaking
 the paths of Phoenix and ICEWS files separately. Due to API issues, these data are treated differently:
 - If Phoenix data are not found in the source path, they are downloaded and saved automatically. This is
 done using [Andrew Halterman's](https://github.com/ahalterman/phoxy) excellent `phoxy` package.
-- ICEWS data have to be downloaded manually and stored on disk to be used in the functions. Hopefully,
-this will be fixed soon once I better understand the new version of the Harvard Dataverse API.
+- ICEWS data have to be downloaded manually and stored on disk to be used in the functions. The
+aforementioned `phoxy' package can be used to automatically access ICEWS data through 2013, but
+cannot yet access the most recent year of data. Hopefully, this will be fixed soon once I better 
+understand the new version of the Harvard Dataverse API.
 
 The current development of the Phoenix Data Project is a collaborative effort between 
 Caerus Associates (Erin Simpson, Andrew Halterman, and John Beieler), Parus Analytics 
@@ -29,6 +31,12 @@ Caerus Associates (Erin Simpson, Andrew Halterman, and John Beieler), Parus Anal
 for Democracy at the University of Illinois at Urbana-Champaign, and The University 
 of Oklahoma. Visit the Phoenix website here: [http://phoenixdata.org/](http://phoenixdata.org/)
 and the website of the Open Event Data Alliance here: [http://openeventdata.org/](http://openeventdata.org).
+
+The Integrated Crisis Early Warning System (ICEWS) public-release data is an ongoing data-coding
+and analysis initiative hosted at Lockheed Martin, originally funded through DARPA, and more recently 
+funded through the Office of Naval Research. ICEWS data is being released monthly through the Harvard
+Dataverse, with a 12-month (give or take a few months) lag: as of 11/3/2015, ICEWS data is available
+through the end of June 2014. For more information, visit [The W-ICEWS site](http://www.lockheedmartin.com/us/products/W-ICEWS/W-ICEWS_Team/Publications.html) at Lockheed Martin.
 
 `phoenixNet` is still in a very early stage of development, and is likely to change
 significantly over time.
