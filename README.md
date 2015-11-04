@@ -44,6 +44,10 @@ significantly over time.
 To-Do List
 ------------
 - [ ] Add support for specifying (1) a subset of actors to examine, or (2) a 'container' (e.g., a state) within which to examine all actors.
+- [ ] Add support for specifying a particular class of interactions to extract and examine.
+- [ ] Increase efficiency of network-stats extraction module. Right now it takes several hours on a pretty fast desktop to pull daily-event-network statistics for the period 2000-2015. Implementing parallelization would speed this up considerably.
+- [ ] Add additional statistics for daily networks (Jaccard index & Hamming distance by network-day)
+
 
 Installation
 ------------
