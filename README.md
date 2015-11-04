@@ -41,6 +41,10 @@ through the end of June 2014. For more information, visit [The W-ICEWS site](htt
 `phoenixNet` is still in a very early stage of development, and is likely to change
 significantly over time.
 
+To-Do List
+------------
+- [ ] Add support for specifying (1) a subset of actors to examine, or (2) a 'container' (e.g., a state) within which to examine all actors.
+
 Installation
 ------------
 `devtools::install_github("jrhammond/phoenixNet")`
