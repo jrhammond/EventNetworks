@@ -4,7 +4,8 @@
 \alias{phoenix_net}
 \title{Convert Phoenix event data to daily event-networks.}
 \usage{
-phoenix_net(start_date, end_date, level)
+phoenix_net(start_date, end_date, level, phoenix_loc, icews_loc,
+  datasource = "both")
 }
 \arguments{
 \item{start_date}{start date of time period as Ymd-format integer (ex:
@@ -14,9 +15,24 @@ phoenix_net(start_date, end_date, level)
         June 1, 2014 as 20140601).}
 
 \item{level}{level of event granularity ('eventcode' or 'rootcode').
-         'Eventcode' creates a network for each of the 226 sub-codes in
-         CAMEO. 'Rootcode' creates a network for each of the 20 event
-         root codes in CAMEO.}
+        'Eventcode' creates a network for each of the 226 sub-codes in
+        CAMEO. 'Rootcode' creates a network for each of the 20 event
+        root codes in CAMEO.}
+
+\item{phoenix_loc}{folder containing Phoenix data sets as daily .csv
+        data tables. Automatically checks for new data sets each time
+        the function is run, and downloads new daily data as it becomes
+        available. Currently in 'one-and'done' format
+        where it downloads the first time, and checks thereafter.}
+
+\item{icews_loc}{folder containing ICEWS data sets as daily .tab data
+        tables. Because I don't know how to work a SWORD API, these will
+        need to be manually downloaded and updated.}
+
+\item{datasource}{source of event data ('phoenix', 'icews', or 'both').
+         Corresponds to the data source used to gather raw data.
+         Currently defaults to 'both', as Phoenix archives  only go
+         back to mid-2014. Currently not used.}
 }
 \value{
 master_networks a LIST object containing daily event-networks.

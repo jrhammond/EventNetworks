@@ -55,13 +55,14 @@ extract_dyadstats <- function(input_date = this_date, input_net = tsna_obj){
   ## Convert to edgelist
   comm_ids <- (ic_membership[ic_membership %in% names(size_ic)])
   comm_members <- which(ic_membership %in% comm_ids)
+  comm_ids <- as.integer(as.factor(comm_ids))
   comm_edgelist <- cbind(comm_ids, comm_members)
 
   ## Convert to bimodal adjacency matrix
   comm_membership <- matrix(0, length(unique(comm_ids)), 255)
-  rownames(comm_membership) <- unique(comm_ids)
+  rownames(comm_membership) <- sort(unique(comm_ids))
   colnames(comm_membership) <- 1:255
-  comm_membership[comm_edgelist] <- 1
+  comm_membership[comm_edgelist[,]] <- 1
 
   ## Matrix multiply to get shared membership matrix
   comm_adj <-  t(comm_membership) %*% comm_membership
