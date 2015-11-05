@@ -33,6 +33,7 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
 
   ## Collapse to daily network
   net_obj <- network.collapse(input_net, at = input_date)
+
   if(network::network.edgecount(net_obj) == 0){
     return(data.table(date = input_date
            , net_degree = 0, net_density = 0
@@ -58,6 +59,20 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
   # Extract a set of NETWORK-LEVEL statistics
   #
   ######
+
+  #### Changes from previous time period
+  ## Get previous time period
+  this_date <- as.Date(as.character(input_date), format = '%Y%m%d')
+  prev_date <- this_date - 1
+  prev_date <- as.integer(format(prev_date, '%Y%m%d'))
+
+  ## Get previous network
+  net_obj_t1 <- network.collapse(input_net, at = prev_date)
+
+  ## Convert to matrices
+  net_mat_t1 <- as.matrix.network(net_obj_t1)
+  net_mat <- as.matrix.network(net_obj)
+  ## Jaccard index
 
   ## Mean degree
   # Since it's a mean, in- vs out-degree doesn't matter
