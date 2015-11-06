@@ -35,6 +35,9 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
   ## Collapse to daily network
   net_obj <- network.collapse(event_dnet, at = input_date)
 
+  ## Convert input date to an actual date object
+  input_date <- as.Date(input_date, format = '%Y%m%d')
+
   ## Write a weird little workaround for the final day of an empty tsna
   ##  object: by default it is a zero-node network, which is odd.
   if(network.size(net_obj) == 0){

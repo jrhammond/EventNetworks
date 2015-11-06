@@ -34,6 +34,10 @@ extract_dyadstats <- function(input_date = this_date, event_dnet = tsna_obj){
 
   ## Collapse to daily network
   net_obj <- network.collapse(event_dnet, at = input_date)
+
+  ## Convert input date to an actual date object
+  input_date <- as.Date(input_date, format = '%Y%m%d')
+
   ## Convert to igraph object via 'intergraph' for additional metrics
   daily_graph <- intergraph::asIgraph(net_obj)
 
@@ -73,7 +77,9 @@ extract_dyadstats <- function(input_date = this_date, event_dnet = tsna_obj){
     comm_ties <- data.table(input_date, which(comm_adj == 1, arr.ind = T))
   }, silent = T)
   if(class(comm_try)[1] == 'try-error'){
-    comm_ties <- data.table('input_date' = integer(), 'nodea' = integer()
+    comm_ties <- data.table('input_date' = structure(rep(NA_real_, 1)
+                                                     , class = 'Date')
+                            , 'nodea' = integer()
                             , 'nodeb' = integer())
   }
   setnames(comm_ties, c('date', 'nodea', 'nodeb'))

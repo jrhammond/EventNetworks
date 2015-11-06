@@ -35,6 +35,9 @@ extract_netstats <- function(input_date = this_date, event_dnet = event_dnet){
   ## Collapse to daily network
   net_obj <- network.collapse(event_dnet, at = input_date)
 
+  ## Convert input date to an actual date object
+  input_date <- as.Date(input_date, format = '%Y%m%d')
+
   if(network::network.edgecount(net_obj) == 0){
     return(data.table(date = input_date
                       , net_jaccard = 0, net_hamming = 0
@@ -64,8 +67,7 @@ extract_netstats <- function(input_date = this_date, event_dnet = event_dnet){
 
   #### Changes from previous time period
   ## Get previous time period
-  this_date <- as.Date(as.character(input_date), format = '%Y%m%d')
-  prev_date <- this_date - 1
+  prev_date <- input_date - 1
   prev_date <- as.integer(format(prev_date, '%Y%m%d'))
 
   ## Get previous network
