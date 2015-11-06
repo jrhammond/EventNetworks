@@ -39,11 +39,14 @@
 #'  @import tsna
 #'  @import plyr
 #'  @import lubridate
+#'  @import phoxy
 #'
 #'  @export
 
 
-phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, datasource = 'both'){
+phoenix_net <- function(start_date, end_date, level
+                        , phoenix_loc, icews_loc, datasource = 'both'
+                        , codeset = 'all'){
 
   ######
   #
@@ -68,7 +71,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   if(level == 'rootcode'){
     codes <- factor(1:20)
     levels(codes) <- as.character(1:20)
-  } else{
+  } else if(level == 'eventcode'){
     codes <- factor(1:298)
     levels(codes) <- as.character(
       c(10:21, 211:214, 22:23, 231:234, 24, 241:244, 25, 251:256, 26:28, 30:31
@@ -83,6 +86,17 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
         , 170:171, 1711:1712, 172, 1721:1724, 173:176, 180:182, 1821:1823, 183
         , 1831:1834, 184:186, 190:195, 1951:1952, 196, 200:204, 2041:2042)
       )
+  } else if(level == 'pentaclass'){
+    codes <- factor(0:4)
+    levels(codes) <- as.character(0:4)
+  }
+
+  ## Allow for subsetting of event codes
+  if(codeset != 'all'){
+    codes <- codes[codes %in% codeset]
+    if(length(codes) == 0){
+      stop('Please enter a valid set of event codes or Goldstein values.')
+    }
   }
 
   ######
@@ -115,9 +129,9 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## NOTE: This currently requires a clumsy step where it reinstalls phoxy
   ##      every time the code is run. This should be cleaned up, but I'm not
   ##      100% sure how to do so in a way that's both accurate and polite.
+
   message('Checking Phoenix data...')
-#   devtools::install_github('jrhammond/phoxy')
-  library(phoxy)
+  # library(phoxy)
   phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
 
   ## Check to see if ICEWS folder exists and that it has at least one 'valid'
@@ -149,7 +163,7 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Subset ICEWS data to only keep key columns
   icews_data <- icews_data[, list(date, sourceactorentity
                                   , targetactorentity, rootcode
-                                  , eventcode)]
+                                  , eventcode, goldstein)]
   icews_data[, source := 'icews']
 
   ######
@@ -160,12 +174,14 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
 
   ## Read and parse Phoenix data
   message('Ingesting Phoenix data...')
-  phoenix_data <- ingest_phoenix(phoenix_loc = phoenix_loc, start_date = start_date, end_date = end_date)
+  phoenix_data <- phoxy::ingest_phoenix(phoenix_loc = phoenix_loc
+                                       , start_date = start_date
+                                       , end_date = end_date)
 
   ## Subset Phoenix data to only keep key columns
   phoenix_data <- phoenix_data[, list(date, sourceactorentity
                                       , targetactorentity, rootcode
-                                      , eventcode)]
+                                      , eventcode, goldstein)]
   phoenix_data[, source := 'phoenix']
 
   ## Coerce Phoenix rootcode/eventcode columns to numeric - there are a few typos
@@ -173,6 +189,8 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   phoenix_data <- phoenix_data[!is.na(rootcode)]
   phoenix_data[, eventcode := as.numeric(eventcode)]
   phoenix_data <- phoenix_data[!is.na(eventcode)]
+  phoenix_data[, goldstein := as.numeric(goldstein)]
+  phoenix_data <- phoenix_data[!is.na(goldstein)]
 
   ######
   #
@@ -181,6 +199,13 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ######
 
   master_data <- rbind(icews_data, phoenix_data)
+
+  ## Create new variable: Pentaclass (0-4)
+  master_data[rootcode %in% c(1, 2), pentaclass := 0L]
+  master_data[rootcode %in% c(3, 4, 5), pentaclass := 1L]
+  master_data[rootcode %in% c(6, 7, 8), pentaclass := 2L]
+  master_data[rootcode %in% c(9, 10, 11, 12, 13, 16), pentaclass := 3L]
+  master_data[rootcode %in% c(14, 15, 17, 18, 19, 20), pentaclass := 4L]
 
   ######
   #
@@ -206,8 +231,21 @@ phoenix_net <- function(start_date, end_date, level, phoenix_loc, icews_loc, dat
   ## Subset columns: drop unused event column
   if(level == 'rootcode'){
     master_data[, eventcode := NULL]
-  } else {
+    master_data[, goldstein := NULL]
+    master_data[, pentaclass := NULL]
+  } else if(level == 'eventcode') {
     master_data[, rootcode := NULL]
+    master_data[, goldstein := NULL]
+    master_data[, pentaclass := NULL]
+  } else if(level == 'goldstein') {
+    master_data[, eventcode := NULL]
+    master_data[, rootcode := NULL]
+    master_data[, pentaclass := NULL]
+  } else if(level == 'pentaclass') {
+    master_data[, eventcode := NULL]
+    master_data[, rootcode := NULL]
+    master_data[, goldstein := NULL]
+    setcolorder(master_data, c(1,2,3,5,4))
   }
 
   ## Set names to generic
