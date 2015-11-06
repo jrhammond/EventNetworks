@@ -64,22 +64,23 @@ phoenix_stats <- function(dailynets){
     message(paste0('Extracting network statistics for code '
                    , substr(code, 5, nchar(code)), ' ...'))
     master_data[[code]]$netstats <- data.table(
-      plyr::ldply(dates, extract_netstats, input_net = event_dnet
+      plyr::ldply(dates, extract_netstats, event_dnet = event_dnet
                   , .progress = 'text'))
+    master_data[[code]]$netstats$net_jaccard[1] <- NA
+    master_data[[code]]$netstats$net_hamming[1] <- NA
 
     ## Extract dyad-level statistics
     message(paste0('Extracting dyadic shared-community statistics for code '
                    , substr(code, 5, nchar(code)), ' ...'))
     master_data[[code]]$dyadstats <-  data.table(
-      plyr::ldply(dates, extract_dyadstats, input_net = event_dnet
+      plyr::ldply(dates, extract_dyadstats, event_dnet = event_dnet
                   , .progress = 'text'))
 
     ## Extract node-level statistics
     message(paste0('Extracting nodal centrality and transitivity statistics for code '
                    , substr(code, 5, nchar(code)), ' ...'))
     master_data[[code]]$nodestats <- data.table(
-      plyr::ldply(dates, extract_nodestats
-                  , input_net = event_dnet
+      plyr::ldply(dates, extract_nodestats, event_dnet = event_dnet
                   , .progress = 'text'))
 
   }

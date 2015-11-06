@@ -4,7 +4,8 @@
 #' INTERNAL FUNCTION: Intakes a given network object and returns a set
 #'  of network-level statistics for output.
 #'
-#'  @param net_obj network object object containing a set of interactions.
+#'  @param input_date A date in integer %Y%m%d format.
+#'  @param event_dnet network object object containing a set of interactions.
 #'
 #'  @return net_stats Table of network-level statistics.
 #'
@@ -23,7 +24,7 @@
 #'  @export
 
 
-extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
+extract_netstats <- function(input_date = this_date, event_dnet = event_dnet){
 
   ######
   #
@@ -32,24 +33,25 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
   ######
 
   ## Collapse to daily network
-  net_obj <- network.collapse(input_net, at = input_date)
+  net_obj <- network.collapse(event_dnet, at = input_date)
 
   if(network::network.edgecount(net_obj) == 0){
     return(data.table(date = input_date
-           , net_degree = 0, net_density = 0
-           , net_trans = 0, net_modularity = 0
-           , num_communities = 0, comm_meansize = 0
-           , xcomm_ties = 0
-           , dyads_mut = 0, dyads_asym = 0
-           , dyads_null = 0
-           , triads_003 = 0, triads_012 = 0
-           , triads_102 = 0, triads_021D = 0
-           , triads_021U = 0, triads_021C = 0
-           , triads_111D = 0, triads_111U = 0
-           , triads_030T = 0, triads_030C = 0
-           , triads_201 = 0, triads_120D = 0
-           , triads_120U = 0, triads_120C = 0
-           , triads_210 = 0, triads_300 = 0))
+                      , net_jaccard = 0, net_hamming = 0
+                      , net_degree = 0, net_density = 0
+                      , net_trans = 0, net_modularity = 0
+                      , num_communities = 0, comm_meansize = 0
+                      , xcomm_ties = 0
+                      , dyads_mut = 0, dyads_asym = 0
+                      , dyads_null = 0
+                      , triads_003 = 0, triads_012 = 0
+                      , triads_102 = 0, triads_021D = 0
+                      , triads_021U = 0, triads_021C = 0
+                      , triads_111D = 0, triads_111U = 0
+                      , triads_030T = 0, triads_030C = 0
+                      , triads_201 = 0, triads_120D = 0
+                      , triads_120U = 0, triads_120C = 0
+                      , triads_210 = 0, triads_300 = 0))
   }
   ## Convert to igraph object via 'intergraph' for additional metrics
   daily_graph <- intergraph::asIgraph(net_obj)
@@ -67,12 +69,21 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
   prev_date <- as.integer(format(prev_date, '%Y%m%d'))
 
   ## Get previous network
-  net_obj_t1 <- network.collapse(input_net, at = prev_date)
+  net_obj_t1 <- network.collapse(event_dnet, at = prev_date)
 
   ## Convert to matrices
   net_mat_t1 <- as.matrix.network(net_obj_t1)
   net_mat <- as.matrix.network(net_obj)
+
   ## Jaccard index
+  net_overlap <- net_mat_t1 + net_mat
+  net_intersect <- sum(net_overlap == 2)
+  net_union <- sum(net_overlap >= 1)
+  net_difference <- sum(net_overlap == 0)
+  net_jaccard <- net_intersect / net_union
+
+  ## Hamming distance
+  net_hamming <- (net_intersect + net_difference) / length(net_mat)
 
   ## Mean degree
   # Since it's a mean, in- vs out-degree doesn't matter
@@ -111,6 +122,7 @@ extract_netstats <- function(input_date = this_date, input_net = tsna_obj){
 
   ## Output network stats
   return(data.table(date = input_date
+                    , net_jaccard = net_jaccard, net_hamming = net_hamming
                     , net_degree = net_degree, net_density = net_density
                     , net_trans = net_trans, net_modularity = ic_mod
                     , num_communities = num_ic, comm_meansize = meansize_ic

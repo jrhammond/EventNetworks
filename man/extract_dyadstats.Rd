@@ -4,10 +4,12 @@
 \alias{extract_dyadstats}
 \title{Extract dyad-level statistics from a given event-network.}
 \usage{
-extract_dyadstats(input_date = this_date, input_net = tsna_obj)
+extract_dyadstats(input_date = this_date, event_dnet = tsna_obj)
 }
 \arguments{
-\item{net_obj}{network object object containing a set of interactions.}
+\item{input_date}{A date in integer %Y%m%d format.}
+
+\item{event_dnet}{network object object containing a set of interactions.}
 }
 \value{
 net_stats Table of dyad-level statistics.

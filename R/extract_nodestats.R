@@ -4,7 +4,8 @@
 #' INTERNAL FUNCTION: Intakes a given network object and returns a set
 #'  of node-level statistics for output.
 #'
-#'  @param net_obj network object object containing a set of interactions.
+#'  @param input_date A date in integer %Y%m%d format.
+#'  @param event_dnet network object object containing a set of interactions.
 #'
 #'  @return net_stats Table of node-level statistics.
 #'
@@ -23,7 +24,7 @@
 #'  @export
 
 
-extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
+extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
 
   ######
   #
@@ -32,7 +33,7 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
   ######
 
   ## Collapse to daily network
-  net_obj <- network.collapse(input_net, at = input_date)
+  net_obj <- network.collapse(event_dnet, at = input_date)
 
   ## Write a weird little workaround for the final day of an empty tsna
   ##  object: by default it is a zero-node network, which is odd.
@@ -68,7 +69,7 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
 
   ## Degree
   # Indegree
-  indegree_dist <- matrix(sna::degree(as.matrix.network(input_net)
+  indegree_dist <- matrix(sna::degree(as.matrix.network(event_dnet)
                                       , cmode = 'indegree'
                                       , rescale = T), nrow = 1)
   indegree_dist[is.nan(indegree_dist)] <- 0
@@ -77,7 +78,7 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
                                        , node_stat = 'indegree', indegree_dist))
 
   # Outdegree
-  outdegree_dist <- matrix(sna::degree(as.matrix.network(input_net)
+  outdegree_dist <- matrix(sna::degree(as.matrix.network(event_dnet)
                                        , cmode = 'outdegree'
                                        , rescale = T), nrow = 1)
   outdegree_dist[is.nan(outdegree_dist)] <- 0
@@ -86,7 +87,7 @@ extract_nodestats <- function(input_date = this_date, input_net = tsna_obj){
                                         , node_stat = 'outdegree', outdegree_dist))
 
   ## Betweenness
-  between_dist <- matrix(sna::betweenness(as.matrix.network(input_net)
+  between_dist <- matrix(sna::betweenness(as.matrix.network(event_dnet)
                                           , gmode = 'digraph'
                                           , rescale = T), nrow = 1)
   between_dist[is.nan(between_dist)] <- 0

@@ -4,7 +4,8 @@
 #' INTERNAL FUNCTION: Intakes a given network object and returns a set
 #'  of dyad-level statistics for output.
 #'
-#'  @param net_obj network object object containing a set of interactions.
+#'  @param input_date A date in integer %Y%m%d format.
+#'  @param event_dnet network object object containing a set of interactions.
 #'
 #'  @return net_stats Table of dyad-level statistics.
 #'
@@ -23,7 +24,7 @@
 #'  @export
 
 
-extract_dyadstats <- function(input_date = this_date, input_net = tsna_obj){
+extract_dyadstats <- function(input_date = this_date, event_dnet = tsna_obj){
 
   ######
   #
@@ -32,7 +33,7 @@ extract_dyadstats <- function(input_date = this_date, input_net = tsna_obj){
   ######
 
   ## Collapse to daily network
-  net_obj <- network.collapse(input_net, at = input_date)
+  net_obj <- network.collapse(event_dnet, at = input_date)
   ## Convert to igraph object via 'intergraph' for additional metrics
   daily_graph <- intergraph::asIgraph(net_obj)
 
