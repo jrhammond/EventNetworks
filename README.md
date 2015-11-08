@@ -43,9 +43,10 @@ significantly over time.
 
 To-Do List
 ------------
-- [ ] Add support for specifying (1) a subset of actors to examine, or (2) a 'container' (e.g., a state) within which to examine all actors, and (3) a level of temporal aggregation (e.g., day/week/month/year).
-- [ ] Add support for specifying a particular class of interactions to extract and examine.
-- [ ] Increase efficiency of network-stats extraction module. Right now it takes several hours on a pretty fast desktop to pull daily-event-network statistics for the period 2000-2015. Implementing parallelization would speed this up considerably.
+- [ ] Add support for specifying a subset of actors to examine, or a 'container' (e.g., a state) within which to examine all actors.
+- [x] Add support for specifying the level of temporal aggregation for event-networks (e.g., day/week/month/year).
+- [x] Add support for specifying a particular class of interactions to extract and examine (e.g., rootcodes 2,4,6).
+- [x] Increase efficiency of network-stats extraction module by enabling parallelization of plyr functions using doMC backend.
 - [x] Add additional network-level statistics for daily networks (Jaccard index & Hamming distance by network-day)
 - [ ] Add additional dyad-level statistics for daily networks (node IDs of symmetric and asymmetric dyads)
 - [ ] Think more about the output data structure. Nested lists are easy, but inconvenient to work with (e.g. net_data$dailynets$code10$netstats$mean_degree) so it might be better to return discrete objects.
@@ -79,84 +80,53 @@ Usage
 Example:
 
 ```
-> # Create a set of dynamic event-networks, one for each event root category
-> data <- phoenix_net(start_date = 20140620, end_date = 20140622, level = 'rootcode')
-trying URL 'https://s3.amazonaws.com/openeventdata/current/events.full.20140620.txt.zip'
-Content type 'application/zip' length 179107 bytes (174 KB)
-downloaded 174 KB
-
-trying URL 'https://s3.amazonaws.com/openeventdata/current/events.full.20140621.txt.zip'
-Content type 'application/zip' length 341968 bytes (333 KB)
-downloaded 333 KB
-
-trying URL 'https://s3.amazonaws.com/openeventdata/current/events.full.20140622.txt.zip'
-Content type 'application/zip' length 300094 bytes (293 KB)
-downloaded 293 KB
-
+> test <- phoenix_net(start_date = 20140620, end_date = 20140720, level = 'pentaclass', phoenix_loc = '/media/jesse/Files/Dropbox/Minerva/phoenix', icews_loc = '/media/jesse/Files/Dropbox/Minerva/icews', datasource = 'both', codeset = 'all', time_window = 'week')
+Checking Phoenix data...
+Phoenix data is current through today.
+Checking ICEWS data...
+ICEWS file location is valid.
+Ingesting ICEWS data...
+Reading in files...
+  |=================================================================================================================| 100%
+Process complete
+Munging ICEWS data...
+Ingesting Phoenix data...
+Reading in files...
+  |=================================================================================================================| 100%
+Process complete
 Warning message:
 In eval(expr, envir, enclos) : NAs introduced by coercion
-> # Examine one dynamic network element containing data for event root code 10
-> data$code10
-NetworkDynamic properties:
-  distinct change times: 3 
-  maximal time range: 20140620 until  20140622 
-
-Includes optional net.obs.period attribute:
- Network observation period info:
-  Number of observation spells: 3 
-  Maximal time range observed: 20140620 until 20140622 
-  Temporal mode: continuous 
-  Time unit: unknown 
-  Suggested time increment: NA 
-
- Network attributes:
-  vertices = 255 
-  directed = TRUE 
-  hyper = FALSE 
-  loops = FALSE 
-  multiple = FALSE 
-  bipartite = FALSE 
-  net.obs.period: (not shown)
-  total edges= 15 
-    missing edges= 0 
-    non-missing edges= 15 
-
- Vertex attribute names: 
-    active vertex.names 
-
- Edge attribute names: 
-    active 
-> # Extract one day's worth of events as a discrete network object
-> daily_network <- network.collapse(data$code10, at = 20140620)
-> daily_network
- Network attributes:
-  vertices = 255 
-  directed = TRUE 
-  hyper = FALSE 
-  loops = FALSE 
-  multiple = FALSE 
-  bipartite = FALSE 
-  total edges= 7 
-    missing edges= 0 
-    non-missing edges= 7 
-
- Vertex attribute names: 
-    vertex.names 
-
-No edge attributes
-
-> data2 <- phoenix_stats(data)
-> data2$code10$netstats
-       date mean_degree      density modularity num_communities mean_commsize cross_tieshare dyadMut dyadAsym
-1: 20140620  0.05490196 1.080747e-04  0.4591837               3      3.000000      0.1428571       0        7
-2: 20140621  0.03921569 7.719623e-05  0.5600000               3      2.333333      0.0000000       1        3
-3: 20140622  0.04705882 9.263548e-05  0.5000000               2      4.000000      0.0000000       0        6
-   dyadNull triad003 triad012 triad102 triad021D triad021U triad021C triad111D triad111U triad030T triad030C
-1:    32378  2729373     1753        0         6         3         0         0         0         0         0
-2:    32381  2730124      758      252         0         0         0         1         0         0         0
-3:    32379  2729622     1508        0         2         0         3         0         0         0         0
-   triad201 triad120D triad120U triad120C triad210 triad300
-1:        0         0         0         0        0        0
-2:        0         0         0         0        0        0
-3:        0         0         0         0        0        0
+> dailynets <- test$dailynets
+> net_stats <- phoenix_stats(dailynets, time_window = 'week', do_parallel = T, n_cores = 4)
+Extracting network statistics for code 0 ...
+Extracting dyadic shared-community statistics for code 0 ...
+Extracting nodal centrality and transitivity statistics for code 0 ...
+Extracting network statistics for code 1 ...
+Extracting dyadic shared-community statistics for code 1 ...
+Extracting nodal centrality and transitivity statistics for code 1 ...
+Extracting network statistics for code 2 ...
+Extracting dyadic shared-community statistics for code 2 ...
+Extracting nodal centrality and transitivity statistics for code 2 ...
+Extracting network statistics for code 3 ...
+Extracting dyadic shared-community statistics for code 3 ...
+Extracting nodal centrality and transitivity statistics for code 3 ...
+Extracting network statistics for code 4 ...
+Extracting dyadic shared-community statistics for code 4 ...
+Extracting nodal centrality and transitivity statistics for code 4 ...
+> net_stats$code3$netstats
+         date net_jaccard net_hamming net_degree net_density net_trans net_modularity num_communities comm_meansize
+1: 2014-06-22          NA          NA   2.713725 0.005341979 0.1901592     0.24925657              11      9.272727
+2: 2014-06-29   0.2795918   0.9945713   2.203922 0.004338428 0.1830986     0.34461316              17      6.117647
+3: 2014-07-06   0.2902542   0.9948481   2.572549 0.005064073 0.1902157     0.29398888              11      9.636364
+4: 2014-07-13   0.2882012   0.9943406   2.650980 0.005218465 0.1942171     0.05588915               7     13.571429
+   xcomm_ties dyads_mut dyads_asym dyads_null triads_003 triads_012 triads_102 triads_021D triads_021U triads_021C
+1:  0.1994220        88        170      32127    2669289      38867      19806         386         285         527
+2:  0.3487544        61        159      32165    2678032      37028      13711         359         169         412
+3:  0.2896341        71        186      32128    2669500      42809      15695         278         444         573
+4:  0.0443787        90        158      32137    2671717      36347      19999         164         364         419
+   triads_111D triads_111U triads_030T triads_030C triads_201 triads_120D triads_120U triads_120C triads_210 triads_300
+1:         642         720          30           6        358          29          22          42         91         35
+2:         376         629          29           5        226          14          19          42         62         22
+3:         663         584          41           7        334          23          33          35         86         30
+4:         797         585          24           4        489          34          18          29        105         40
 
