@@ -50,6 +50,8 @@ To-Do List
 - [x] Add additional network-level statistics for daily networks (Jaccard index & Hamming distance by network-day)
 - [ ] Add additional dyad-level statistics for daily networks (node IDs of symmetric and asymmetric dyads)
 - [ ] Think more about the output data structure. Nested lists are easy, but inconvenient to work with (e.g. net_data$dailynets$code10$netstats$mean_degree) so it might be better to return discrete objects.
+- [ ] Clean up the documentation and clarify arguments to make it easier for others to use.
+- [ ] Set up more informative error messages.
 
 
 Installation
