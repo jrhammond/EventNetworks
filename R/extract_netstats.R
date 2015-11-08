@@ -38,7 +38,6 @@ extract_netstats <- function(input_date = this_date, event_dnet = event_dnet, da
   ## Convert input date to an actual date object
   prev_date <- datelist[which(datelist %in% input_date) - 1]
   input_date <- as.Date(as.character(input_date), format = '%Y%m%d')
-  message(prev_date)
 
   if(network::network.edgecount(net_obj) == 0){
     return(data.table(date = input_date
