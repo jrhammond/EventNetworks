@@ -22,10 +22,10 @@
 #' @param icews_loc folder containing ICEWS data sets as daily .tab data
 #'          tables. Because I don't know how to work a SWORD API, these will
 #'          need to be manually downloaded and updated.
-#' @param datasource source of event data ('phoenix', 'icews', or 'both').
-#'          Corresponds to the data source used to gather raw data.
-#'          Currently defaults to 'both', as Phoenix archives  only go
-#'          back to mid-2014. Currently not used.
+#' @param actorset set of actors for which to create event-networks. Defaults
+#'          to the 255 ISO-coded states in the international system. Specifying
+#'          a specific state or set of states (as 3-character ISO codes) will
+#'          extract all the 'major' actors withint that state/states.
 #' @param codeset subset of event codes as specified by 'level'. This is useful
 #'          if you desire to extract only a portion of interactions recorded
 #'          by CAMEO, but has to align with the code aggregation specified
@@ -35,7 +35,7 @@
 #' @param time_window temporal window to build event-networks. Valid
 #'          entries are 'day', 'week', 'month', or 'year'.
 #'
-#' @return master_networks a LIST object containing daily event-networks.
+#' @return master_networks a LIST object containing temporally referenced event-networks.
 #'
 #' @rdname phoenix_net
 #'
@@ -56,13 +56,14 @@
 #' @import lubridate
 #' @import phoxy
 phoenix_net <- function(start_date, end_date, level
-                        , phoenix_loc, icews_loc, datasource = 'both'
+                        , phoenix_loc, icews_loc
+                        , actorset = 'states'
                         , codeset = 'all'
                         , time_window = 'day'){
 
   ######
   #
-  # Set up some initial values
+  # Set up some initial values: Time windows
   #
   ######
 
@@ -75,10 +76,49 @@ phoenix_net <- function(start_date, end_date, level
   dates <- seq.Date(start_date, end_date, by = 'day')
   dates <- unique(lubridate::round_date(dates, time_window))
 
-  ## Actors (default to 255 ISO3C state codes)
-  actors <- countrycode::countrycode_data$iso3c
-  actors <- as.factor(sort(actors))
-  n <- length(actors)
+  ######
+  #
+  # Set up some initial values: Actors
+  #
+  ######
+
+  ## Paste-function that can handle NA entries
+  ## (http://stackoverflow.com/questions/13673894/suppress-nas-in-paste)
+  paste3 <- function(...,sep=", ") {
+    L <- list(...)
+    L <- lapply(L,function(x) {x[is.na(x)] <- ""; x})
+    ret <-gsub(paste0("(^",sep,"|",sep,"$)"),"",
+               gsub(paste0(sep,sep),sep,
+                    do.call(paste,c(L,list(sep=sep)))))
+    is.na(ret) <- ret==""
+    ret
+  }
+
+  ## Default actors: 255 ISO-coded countries
+  if('states' %in% actorset){
+    # Set up set of primary actor codes
+    statelist <- unique(countrycode::countrycode_data$iso3c)
+    statelist <- statelist[!is.na(statelist)]
+    actors <- as.factor(sort(statelist))
+    n <- length(actors)
+
+  } else {
+    ## Set up set of secondary actor codes
+    secondary_actors <- c('GOV', 'MIL', 'REB', 'OPP', 'PTY', 'COP', 'JUD'
+                          , 'SPY', 'MED', 'EDU', 'BUS', 'CRM', 'CVL')
+    statelist <- countrycode::countrycode_data$iso3c
+    actors <- unique(statelist[statelist %in% actorset])
+    actors <- actors[!is.na(actors)]
+    actors <- unique(as.vector(outer(actors, secondary_actors, paste, sep = '')))
+    actors <- as.factor(sort(actors))
+    n <- length(actors)
+  }
+
+  ######
+  #
+  # Set up some initial values: Event codes
+  #
+  ######
 
   ## Factor variables describing CAMEO categories
   if(level == 'rootcode'){
@@ -104,11 +144,14 @@ phoenix_net <- function(start_date, end_date, level
     levels(codes) <- as.character(0:4)
   }
 
-  ## Allow for subsetting of event codes
-  if(codeset != 'all'){
+  ## Subset of event codes
+  if(!any('all' %in% codeset)){
+    if(sum(!codeset %in% codes) > 0){
+      message('Warning: some event codes do not match specified event class. Proceeding with valid event codes.')
+    }
     codes <- codes[codes %in% codeset]
     if(length(codes) == 0){
-      stop('Please enter a valid set of event codes or Goldstein values.')
+      stop('Please enter a valid set of event codes or pentaclass values.')
     }
   }
 
@@ -192,17 +235,18 @@ phoenix_net <- function(start_date, end_date, level
                                        , end_date = end_date)
 
   ## Subset Phoenix data to only keep key columns
-  phoenix_data <- phoenix_data[, list(date, sourceactorentity
-                                      , targetactorentity, rootcode
-                                      , eventcode, goldstein)]
+  phoenix_data <- phoenix_data[, list(date, paste3(sourceactorentity
+                                                   , sourceactorrole, sep = '')
+                                      , paste3(targetactorentity
+                                               , targetactorrole, sep = '')
+                                      , rootcode, eventcode, goldstein)]
+  setnames(phoenix_data, c('V2', 'V3')
+           , c('sourceactorentity', 'targetactorentity'))
   phoenix_data[, source := 'phoenix']
 
-  ## Coerce Phoenix rootcode/eventcode columns to numeric - there are a few typos
-  phoenix_data[, rootcode := as.integer(rootcode)]
+  ## Drop any missing data
   phoenix_data <- phoenix_data[!is.na(rootcode)]
-  phoenix_data[, eventcode := as.numeric(eventcode)]
   phoenix_data <- phoenix_data[!is.na(eventcode)]
-  phoenix_data[, goldstein := as.numeric(goldstein)]
   phoenix_data <- phoenix_data[!is.na(goldstein)]
 
   ######
@@ -212,6 +256,8 @@ phoenix_net <- function(start_date, end_date, level
   ######
 
   master_data <- rbind(icews_data, phoenix_data)
+  setnames(master_data, c('sourceactorentity', 'targetactorentity')
+           , c('actora', 'actorb'))
 
   ## Create new variable: Pentaclass (0-4)
   master_data[rootcode %in% c(1, 2), pentaclass := 0L]
@@ -219,6 +265,17 @@ phoenix_net <- function(start_date, end_date, level
   master_data[rootcode %in% c(6, 7, 8), pentaclass := 2L]
   master_data[rootcode %in% c(9, 10, 11, 12, 13, 16), pentaclass := 3L]
   master_data[rootcode %in% c(14, 15, 17, 18, 19, 20), pentaclass := 4L]
+
+  ######################################
+  ## IMPORTANT ASSUMPTION HERE:
+  ## I am *ASSUMING* that NULL/NA entries after a state code
+  ##  implies that the actor is the GOVERNMENT. As such I am replacing
+  ##  all such missing entries with 'GOV'.
+  ######################################
+  master_data[actora %in%  countrycode::countrycode_data$iso3c
+              , actora := paste0(actora, 'GOV')]
+  master_data[actorb %in%  countrycode::countrycode_data$iso3c
+              , actorb := paste0(actorb, 'GOV')]
 
   ######
   #
@@ -235,14 +292,24 @@ phoenix_net <- function(start_date, end_date, level
 
   ## Subset events and columns: only events that:
   ##  1. involve specified actor set on both side (as ENTITIES)
-  ##  2. involve TWO DIFFERENT actors (i.e. no self-interactions)
-  master_data <- master_data[(sourceactorentity %in% actors
-                              & targetactorentity %in% actors)
-                          | (sourceactorentity %in% paste0(actors, 'GOV')
-                             & targetactorentity %in% paste0(actors, 'GOV'))
-                          | (sourceactorentity %in% paste0(actors, 'MIL')
-                           & targetactorentity %in% paste0(actors, 'MIL'))]
-  master_data <- master_data[substr(sourceactorentity, 1, 3) != substr(targetactorentity, 1, 3)]
+  ##  2. involve TWO DIFFERENT actors (i.e. no self-interactions
+  ##      as specified by user)
+  if(('states' %in% actorset)){
+    master_data <- master_data[(actora %in% paste0(actors, 'GOV')
+                                  & actorb %in% paste0(actors, 'GOV'))
+                               | (actora %in% paste0(actors, 'MIL')
+                                  & actorb %in% paste0(actors, 'MIL'))]
+    master_data <- master_data[substr(actora, 1, 3) != substr(actorb, 1, 3)]
+    ## Set actor codes to state-level factors
+    master_data[, actora := factor(substr(actora, 1, 3), levels = levels(actors))]
+    master_data[, actorb := factor(substr(actorb, 1, 3), levels = levels(actors))]
+  } else{
+    master_data <- master_data[(actora %in% actors
+                                & actorb %in% actors)]
+    master_data <- master_data[actora != actorb]
+    master_data[, actora := factor(actora, levels = levels(actors))]
+    master_data[, actorb := factor(actorb, levels = levels(actors))]
+  }
 
   ## Subset columns: drop unused event column
   if(level == 'rootcode'){
@@ -266,12 +333,6 @@ phoenix_net <- function(start_date, end_date, level
 
   ## Set names to generic
   setnames(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
-
-  ## Set actor codes to state-level factors
-  ## NOTE: this removes differentiation of actors within states (ex: gov vs mil)
-  ##  and as such should probably be moved to an argument in the future.
-  master_data[, actora := factor(substr(actora, 1, 3), levels = levels(actors))]
-  master_data[, actorb := factor(substr(actorb, 1, 3), levels = levels(actors))]
 
   ## Set CAMEO coded event/root codes to factors
   master_data[, code := factor(code, levels = codes)]

@@ -5,7 +5,7 @@
 \title{Convert Phoenix event data to daily event-networks.}
 \usage{
 phoenix_net(start_date, end_date, level, phoenix_loc, icews_loc,
-  datasource = "both", codeset = "all", time_window = "day")
+  actorset = "states", codeset = "all", time_window = "day")
 }
 \arguments{
 \item{start_date}{start date of time period as Ymd-format integer (ex:
@@ -29,10 +29,10 @@ where it downloads the first time, and checks thereafter.}
 tables. Because I don't know how to work a SWORD API, these will
 need to be manually downloaded and updated.}
 
-\item{datasource}{source of event data ('phoenix', 'icews', or 'both').
-Corresponds to the data source used to gather raw data.
-Currently defaults to 'both', as Phoenix archives  only go
-back to mid-2014. Currently not used.}
+\item{actorset}{set of actors for which to create event-networks. Defaults
+to the 255 ISO-coded states in the international system. Specifying
+a specific state or set of states (as 3-character ISO codes) will
+extract all the 'major' actors withint that state/states.}
 
 \item{codeset}{subset of event codes as specified by 'level'. This is useful
 if you desire to extract only a portion of interactions recorded
@@ -45,7 +45,7 @@ the 'codeset' you specify has to be one or more root codes between
 entries are 'day', 'week', 'month', or 'year'.}
 }
 \value{
-master_networks a LIST object containing daily event-networks.
+master_networks a LIST object containing temporally referenced event-networks.
 }
 \description{
 Take event-level data and convert it into
