@@ -1,4 +1,3 @@
-#'
 #' Convert Phoenix event data to daily event-networks.
 #'
 #'  Take event-level data and convert it into
@@ -7,46 +6,59 @@
 #'  an R network object. These networks can then be processed
 #'  and analyzed.
 #'
-#'  @param start_date start date of time period as Ymd-format integer (ex:
+#' @param start_date start date of time period as Ymd-format integer (ex:
 #'          June 1, 2014 as 20140601).
-#'  @param end_date end date of time period as Ymd-format integer (ex:
+#' @param end_date end date of time period as Ymd-format integer (ex:
 #'          June 1, 2014 as 20140601).
-#'  @param level level of event granularity ('eventcode' or 'rootcode').
+#' @param level level of event granularity ('eventcode' or 'rootcode').
 #'          'Eventcode' creates a network for each of the 226 sub-codes in
 #'          CAMEO. 'Rootcode' creates a network for each of the 20 event
 #'          root codes in CAMEO.
-#'  @param phoenix_loc folder containing Phoenix data sets as daily .csv
+#' @param phoenix_loc folder containing Phoenix data sets as daily .csv
 #'          data tables. Automatically checks for new data sets each time
 #'          the function is run, and downloads new daily data as it becomes
 #'          available. Currently in 'one-and'done' format
 #'          where it downloads the first time, and checks thereafter.
-#'  @param icews_loc folder containing ICEWS data sets as daily .tab data
+#' @param icews_loc folder containing ICEWS data sets as daily .tab data
 #'          tables. Because I don't know how to work a SWORD API, these will
 #'          need to be manually downloaded and updated.
-#'  @param datasource source of event data ('phoenix', 'icews', or 'both').
+#' @param datasource source of event data ('phoenix', 'icews', or 'both').
 #'          Corresponds to the data source used to gather raw data.
 #'          Currently defaults to 'both', as Phoenix archives  only go
 #'          back to mid-2014. Currently not used.
+#' @param codeset subset of event codes as specified by 'level'. This is useful
+#'          if you desire to extract only a portion of interactions recorded
+#'          by CAMEO, but has to align with the code aggregation specified
+#'          in the 'level' argument. For example, if you specify 'rootcode',
+#'          the 'codeset' you specify has to be one or more root codes between
+#'          1 and 20. Defaults to 'all'.
+#' @param time_window temporal window to build event-networks. Valid
+#'          entries are 'day', 'week', 'month', or 'year'.
 #'
-#'  @return master_networks a LIST object containing daily event-networks.
+#' @return master_networks a LIST object containing daily event-networks.
 #'
-#'  @keywords phoenix, event data
+#' @rdname phoenix_net
 #'
-#'  @import data.table
-#'  @import countrycode
-#'  @import reshape2
-#'  @import statnet
-#'  @import tsna
-#'  @import plyr
-#'  @import lubridate
-#'  @import phoxy
+#' @author Jesse Hammond
 #'
-#'  @export
+#' @note This function is still in early development and may contain significant errors.
+#'        Don't trust it.
+#'
 
-
+#' @export
+#'
+#' @import data.table
+#' @import countrycode
+#' @import reshape2
+#' @import statnet
+#' @import tsna
+#' @import plyr
+#' @import lubridate
+#' @import phoxy
 phoenix_net <- function(start_date, end_date, level
                         , phoenix_loc, icews_loc, datasource = 'both'
-                        , codeset = 'all'){
+                        , codeset = 'all'
+                        , time_window = 'day'){
 
   ######
   #
@@ -61,6 +73,7 @@ phoenix_net <- function(start_date, end_date, level
     end_date <- as.Date(lubridate::ymd(end_date))
   }
   dates <- seq.Date(start_date, end_date, by = 'day')
+  dates <- unique(lubridate::round_date(dates, time_window))
 
   ## Actors (default to 255 ISO3C state codes)
   actors <- countrycode::countrycode_data$iso3c
@@ -214,6 +227,9 @@ phoenix_net <- function(start_date, end_date, level
   #
   ######
 
+  ## Aggregate dates to specified time window
+  master_data[, date := lubridate::floor_date(date, time_window)]
+
   ## Subset events: keep only events within date range
   master_data <- master_data[date %in% dates]
 
@@ -300,7 +316,6 @@ phoenix_net <- function(start_date, end_date, level
   both_sources[is.na(V1), V1 := 0]
   sources_overlap$both_sources <- both_sources$V1
 
-
   ## Drop flags and source variable
   master_data[, dup_fromtop := NULL]
   master_data[, dup_frombot := NULL]
@@ -310,6 +325,7 @@ phoenix_net <- function(start_date, end_date, level
   master_data <- unique(master_data)
 
   ## Format for networkDynamic creation
+  master_data[, date := as.integer(format(date, '%Y%m%d'))]
   master_data[, end_date := date]
   setcolorder(master_data, c('date', 'end_date', 'actora', 'actorb', 'code'))
 
@@ -321,15 +337,16 @@ phoenix_net <- function(start_date, end_date, level
   #
   ######
 
-  dates_ref <- as.integer(format(dates, '%Y%m%d'))
+  dates <- c(dates, (max(dates) + 1))
+  dates <- as.integer(format(dates, '%Y%m%d'))
   for(this_code in codes){
 
     ## Subset by root/event code
     event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb)]
 
     if(nrow(event_data) > 0){
-      event_data[, date := as.integer(format(date, '%Y%m%d'))]
-      event_data[, end_date := as.integer(format(end_date, '%Y%m%d'))]
+      # event_data[, date := as.integer(format(date, '%Y%m%d'))]
+      # event_data[, end_date := as.integer(format(end_date, '%Y%m%d'))]
       event_data[, actora := as.integer(actora)]
       event_data[, actorb := as.integer(actorb)]
 
@@ -338,7 +355,7 @@ phoenix_net <- function(start_date, end_date, level
       network.vertex.names(event_net) <- levels(actors)
 
       ## Generate networkDynamic object
-      net_period <- list(observations = list(c(min(dates_ref), max(dates_ref)))
+      net_period <- list(observations = list(c(min(dates), max(dates)))
                          , mode = 'discrete', time.increment = 1
                          , time.unit = 'step')
       temporal_codenet <- networkDynamic(base.net = event_net
@@ -349,12 +366,12 @@ phoenix_net <- function(start_date, end_date, level
       master_networks[paste0('code', this_code)] <- list(temporal_codenet)
     } else {
       ## Generate networkDynamic object
-      net_period <- list(observations = list(c(min(dates_ref), max(dates_ref)))
+      net_period <- list(observations = list(c(min(dates), max(dates)))
                          , mode = 'discrete', time.increment = 1
                          , time.unit = 'step')
       temporal_codenet <- network.initialize(n = n, directed = T, loops = F)
       network.vertex.names(temporal_codenet) <- levels(actors)
-      activate.vertices(temporal_codenet, onset = min(dates_ref), terminus = max(dates_ref))
+      activate.vertices(temporal_codenet, onset = min(dates), terminus = max(dates))
       set.network.attribute(temporal_codenet, 'net.obs.period', net_period)
     }
 

@@ -4,24 +4,24 @@
 #' INTERNAL FUNCTION: Intakes a given network object and returns a set
 #'  of dyad-level statistics for output.
 #'
-#'  @param input_date A date in integer %Y%m%d format.
-#'  @param event_dnet network object object containing a set of interactions.
+#' @param input_date A date in integer %Y%m%d format.
+#' @param event_dnet network object object containing a set of interactions.
 #'
-#'  @return net_stats Table of dyad-level statistics.
+#' @return net_stats Table of dyad-level statistics.
 #'
-#'  @keywords phoenix, event data
+#' @keywords phoenix, event data
 #'
-#'  @import data.table
-#'  @import countrycode
-#'  @import reshape2
-#'  @import statnet
-#'  @import tsna
-#'  @import plyr
-#'  @import lubridate
-#'  @import igraph
-#'  @import intergraph
+#' @import data.table
+#' @import countrycode
+#' @import reshape2
+#' @import statnet
+#' @import tsna
+#' @import plyr
+#' @import lubridate
+#' @import igraph
+#' @import intergraph
 #'
-#'  @export
+#' @export
 
 
 extract_dyadstats <- function(input_date = this_date, event_dnet = tsna_obj){
@@ -36,7 +36,7 @@ extract_dyadstats <- function(input_date = this_date, event_dnet = tsna_obj){
   net_obj <- network.collapse(event_dnet, at = input_date)
 
   ## Convert input date to an actual date object
-  input_date <- as.Date(input_date, format = '%Y%m%d')
+  input_date <- as.Date(as.character(input_date), format = '%Y%m%d')
 
   ## Convert to igraph object via 'intergraph' for additional metrics
   daily_graph <- intergraph::asIgraph(net_obj)
@@ -77,10 +77,9 @@ extract_dyadstats <- function(input_date = this_date, event_dnet = tsna_obj){
     comm_ties <- data.table(input_date, which(comm_adj == 1, arr.ind = T))
   }, silent = T)
   if(class(comm_try)[1] == 'try-error'){
-    comm_ties <- data.table('input_date' = structure(rep(NA_real_, 1)
-                                                     , class = 'Date')
-                            , 'nodea' = integer()
-                            , 'nodeb' = integer())
+    comm_ties <- data.table('input_date' = NA
+                            , 'nodea' = NA
+                            , 'nodeb' = NA)
   }
   setnames(comm_ties, c('date', 'nodea', 'nodeb'))
   comm_ties <- comm_ties[nodea != nodeb]

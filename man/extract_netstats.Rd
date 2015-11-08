@@ -4,30 +4,22 @@
 \alias{extract_netstats}
 \title{Extract network-level statistics from a given event-network.}
 \usage{
-extract_netstats(input_date = this_date, event_dnet = event_dnet)
+extract_netstats(input_date = this_date, event_dnet = event_dnet,
+  datelist = dates)
+}
+\arguments{
+\item{input_date}{A date in integer %Y%m%d format.}
+
+\item{event_dnet}{network object object containing a set of interactions.}
+}
+\value{
+net_stats Table of network-level statistics.
 }
 \description{
 INTERNAL FUNCTION: Intakes a given network object and returns a set
  of network-level statistics for output.
 }
-\details{
-@param input_date A date in integer %Y%m%d format.
- @param event_dnet network object object containing a set of interactions.
-
-@return net_stats Table of network-level statistics.
-
-@keywords phoenix, event data
-
-@import data.table
- @import countrycode
- @import reshape2
- @import statnet
- @import tsna
- @import plyr
- @import lubridate
- @import igraph
- @import intergraph
-
-@export
-}
+\keyword{data}
+\keyword{event}
+\keyword{phoenix,}
 

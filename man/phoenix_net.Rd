@@ -5,7 +5,47 @@
 \title{Convert Phoenix event data to daily event-networks.}
 \usage{
 phoenix_net(start_date, end_date, level, phoenix_loc, icews_loc,
-  datasource = "both", codeset = "all")
+  datasource = "both", codeset = "all", time_window = "day")
+}
+\arguments{
+\item{start_date}{start date of time period as Ymd-format integer (ex:
+June 1, 2014 as 20140601).}
+
+\item{end_date}{end date of time period as Ymd-format integer (ex:
+June 1, 2014 as 20140601).}
+
+\item{level}{level of event granularity ('eventcode' or 'rootcode').
+'Eventcode' creates a network for each of the 226 sub-codes in
+CAMEO. 'Rootcode' creates a network for each of the 20 event
+root codes in CAMEO.}
+
+\item{phoenix_loc}{folder containing Phoenix data sets as daily .csv
+data tables. Automatically checks for new data sets each time
+the function is run, and downloads new daily data as it becomes
+available. Currently in 'one-and'done' format
+where it downloads the first time, and checks thereafter.}
+
+\item{icews_loc}{folder containing ICEWS data sets as daily .tab data
+tables. Because I don't know how to work a SWORD API, these will
+need to be manually downloaded and updated.}
+
+\item{datasource}{source of event data ('phoenix', 'icews', or 'both').
+Corresponds to the data source used to gather raw data.
+Currently defaults to 'both', as Phoenix archives  only go
+back to mid-2014. Currently not used.}
+
+\item{codeset}{subset of event codes as specified by 'level'. This is useful
+if you desire to extract only a portion of interactions recorded
+by CAMEO, but has to align with the code aggregation specified
+in the 'level' argument. For example, if you specify 'rootcode',
+the 'codeset' you specify has to be one or more root codes between
+1 and 20. Defaults to 'all'.}
+
+\item{time_window}{temporal window to build event-networks. Valid
+entries are 'day', 'week', 'month', or 'year'.}
+}
+\value{
+master_networks a LIST object containing daily event-networks.
 }
 \description{
 Take event-level data and convert it into
@@ -14,41 +54,11 @@ Take event-level data and convert it into
  an R network object. These networks can then be processed
  and analyzed.
 }
-\details{
-@param start_date start date of time period as Ymd-format integer (ex:
-         June 1, 2014 as 20140601).
- @param end_date end date of time period as Ymd-format integer (ex:
-         June 1, 2014 as 20140601).
- @param level level of event granularity ('eventcode' or 'rootcode').
-         'Eventcode' creates a network for each of the 226 sub-codes in
-         CAMEO. 'Rootcode' creates a network for each of the 20 event
-         root codes in CAMEO.
- @param phoenix_loc folder containing Phoenix data sets as daily .csv
-         data tables. Automatically checks for new data sets each time
-         the function is run, and downloads new daily data as it becomes
-         available. Currently in 'one-and'done' format
-         where it downloads the first time, and checks thereafter.
- @param icews_loc folder containing ICEWS data sets as daily .tab data
-         tables. Because I don't know how to work a SWORD API, these will
-         need to be manually downloaded and updated.
- @param datasource source of event data ('phoenix', 'icews', or 'both').
-         Corresponds to the data source used to gather raw data.
-         Currently defaults to 'both', as Phoenix archives  only go
-         back to mid-2014. Currently not used.
-
-@return master_networks a LIST object containing daily event-networks.
-
-@keywords phoenix, event data
-
-@import data.table
- @import countrycode
- @import reshape2
- @import statnet
- @import tsna
- @import plyr
- @import lubridate
- @import phoxy
-
-@export
+\note{
+This function is still in early development and may contain significant errors.
+       Don't trust it.
+}
+\author{
+Jesse Hammond
 }
 

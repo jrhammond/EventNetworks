@@ -6,27 +6,40 @@
 #'  levels.
 #'
 #'
-#'  @param dailynets networkDynamic object containing daily event-nets
+#' @param dailynets networkDynamic object containing daily event-nets
 #'          produced via phoenix_net function.
+#' @param time_window time interval of aggregate event-network objects. Valid
+#'          entries are 'day', 'week', 'month', 'year'.
+#' @param codes string of event codes, root codes, or pentaclass codes.
+#'          Note: these codes have to be in the same format as the original
+#'          network layers created via 'phoenix_net'. If you specify rootcodes
+#'          in the creation step, entering pentaclass codes in this step
+#'          will produce an error.
+#' @param do_parallel Logical TRUE/FALSE. Whether to use parallel backend
+#'          'doMC' when extracting network statistics by code. Considerably
+#'          faster than single-core, but less reliable.
 #'
-#'  @return phoenix_out a LIST object of tables containing descriptive
+#'
+#' @return phoenix_out a LIST object of tables containing descriptive
 #'          statistics for daily event-networks.
 #'
-#'  @keywords phoenix, event data
+#' @keywords phoenix, event data
 #'
-#'  @import data.table
-#'  @import countrycode
-#'  @import reshape2
-#'  @import statnet
-#'  @import tsna
-#'  @import plyr
-#'  @import lubridate
-#'  @import igraph
-#'  @import intergraph
+#' @import data.table
+#' @import countrycode
+#' @import reshape2
+#' @import statnet
+#' @import tsna
+#' @import plyr
+#' @import lubridate
+#' @import igraph
+#' @import intergraph
+#' @import doMC
 #'
-#'  @export
+#' @export
 
-phoenix_stats <- function(dailynets){
+phoenix_stats <- function(dailynets, time_window = 'day'
+                          , codes = 'all', do_parallel = F, n_cores = 4){
 
   ######
   #
@@ -34,14 +47,27 @@ phoenix_stats <- function(dailynets){
   #
   ######
 
-  codes <- names(dailynets)
+  ## Initialize parallel cores
+  if(do_parallel == T){
+    doMC::registerDoMC(cores=n_cores)
+  }
+
+  ## Subset codes
+  if(codes == 'all'){
+    codes <- names(dailynets)
+  } else{
+    codes <- paste0('code', codes)
+  }
+
+  ## Set up dates
   start_end <- get.network.attribute(
     dailynets[[1]],'net.obs.period')$observations[[1]]
   start_date_int <- start_end[1]
   end_date_int <- start_end[2]
   start_date <- as.Date(as.character(start_date_int), format = '%Y%m%d')
   end_date <- as.Date(as.character(end_date_int), format = '%Y%m%d')
-  dates <- as.integer(format(seq.Date(start_date, end_date, 'day'), '%Y%m%d'))
+  dates <- as.integer(format(seq.Date(start_date, end_date, time_window), '%Y%m%d'))
+  dates <- dates[-length(dates)]
   ndates <- length(dates)
   nodes <- network.vertex.names(dailynets[[1]])
 
@@ -65,7 +91,9 @@ phoenix_stats <- function(dailynets){
                    , substr(code, 5, nchar(code)), ' ...'))
     master_data[[code]]$netstats <- data.table(
       plyr::ldply(dates, extract_netstats, event_dnet = event_dnet
-                  , .progress = 'text'))
+                  , datelist = dates
+                  # , .progress = 'text'
+                  , .parallel = do_parallel))
     master_data[[code]]$netstats$net_jaccard[1] <- NA
     master_data[[code]]$netstats$net_hamming[1] <- NA
 
@@ -74,14 +102,17 @@ phoenix_stats <- function(dailynets){
                    , substr(code, 5, nchar(code)), ' ...'))
     master_data[[code]]$dyadstats <-  data.table(
       plyr::ldply(dates, extract_dyadstats, event_dnet = event_dnet
-                  , .progress = 'text'))
+                  # , .progress = 'text'
+                  , .parallel = do_parallel
+                  ))
 
     ## Extract node-level statistics
     message(paste0('Extracting nodal centrality and transitivity statistics for code '
                    , substr(code, 5, nchar(code)), ' ...'))
     master_data[[code]]$nodestats <- data.table(
       plyr::ldply(dates, extract_nodestats, event_dnet = event_dnet
-                  , .progress = 'text'))
+                  # , .progress = 'text'
+                  , .parallel = do_parallel))
 
   }
 

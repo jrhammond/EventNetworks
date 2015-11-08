@@ -4,27 +4,27 @@
 #' INTERNAL FUNCTION: Intakes a given network object and returns a set
 #'  of network-level statistics for output.
 #'
-#'  @param input_date A date in integer %Y%m%d format.
-#'  @param event_dnet network object object containing a set of interactions.
+#' @param input_date A date in integer %Y%m%d format.
+#' @param event_dnet network object object containing a set of interactions.
 #'
-#'  @return net_stats Table of network-level statistics.
+#' @return net_stats Table of network-level statistics.
 #'
-#'  @keywords phoenix, event data
+#' @keywords phoenix, event data
 #'
-#'  @import data.table
-#'  @import countrycode
-#'  @import reshape2
-#'  @import statnet
-#'  @import tsna
-#'  @import plyr
-#'  @import lubridate
-#'  @import igraph
-#'  @import intergraph
+#' @import data.table
+#' @import countrycode
+#' @import reshape2
+#' @import statnet
+#' @import tsna
+#' @import plyr
+#' @import lubridate
+#' @import igraph
+#' @import intergraph
 #'
-#'  @export
+#' @export
 
 
-extract_netstats <- function(input_date = this_date, event_dnet = event_dnet){
+extract_netstats <- function(input_date = this_date, event_dnet = event_dnet, datelist = dates){
 
   ######
   #
@@ -36,7 +36,9 @@ extract_netstats <- function(input_date = this_date, event_dnet = event_dnet){
   net_obj <- network.collapse(event_dnet, at = input_date)
 
   ## Convert input date to an actual date object
-  input_date <- as.Date(input_date, format = '%Y%m%d')
+  prev_date <- datelist[which(datelist %in% input_date) - 1]
+  input_date <- as.Date(as.character(input_date), format = '%Y%m%d')
+  message(prev_date)
 
   if(network::network.edgecount(net_obj) == 0){
     return(data.table(date = input_date
@@ -66,26 +68,28 @@ extract_netstats <- function(input_date = this_date, event_dnet = event_dnet){
   ######
 
   #### Changes from previous time period
-  ## Get previous time period
-  prev_date <- input_date - 1
-  prev_date <- as.integer(format(prev_date, '%Y%m%d'))
+  try_prev <- try({
+    ## Get previous time period
+    net_obj_t1 <- network.collapse(event_dnet, at = prev_date)
 
-  ## Get previous network
-  net_obj_t1 <- network.collapse(event_dnet, at = prev_date)
+    ## Convert to matrices
+    net_mat_t1 <- as.matrix.network(net_obj_t1)
+    net_mat <- as.matrix.network(net_obj)
 
-  ## Convert to matrices
-  net_mat_t1 <- as.matrix.network(net_obj_t1)
-  net_mat <- as.matrix.network(net_obj)
+    ## Jaccard index
+    net_overlap <- net_mat_t1 + net_mat
+    net_intersect <- sum(net_overlap == 2)
+    net_union <- sum(net_overlap >= 1)
+    net_difference <- sum(net_overlap == 0)
+    net_jaccard <- net_intersect / net_union
 
-  ## Jaccard index
-  net_overlap <- net_mat_t1 + net_mat
-  net_intersect <- sum(net_overlap == 2)
-  net_union <- sum(net_overlap >= 1)
-  net_difference <- sum(net_overlap == 0)
-  net_jaccard <- net_intersect / net_union
-
-  ## Hamming distance
-  net_hamming <- (net_intersect + net_difference) / length(net_mat)
+    ## Hamming distance
+    net_hamming <- (net_intersect + net_difference) / length(net_mat)
+  }, silent = T)
+  if(class(try_prev)[1] == 'try-error'){
+    net_jaccard <- NA
+    net_hamming <- NA
+  }
 
   ## Mean degree
   # Since it's a mean, in- vs out-degree doesn't matter
