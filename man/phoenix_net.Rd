@@ -14,10 +14,11 @@ June 1, 2014 as 20140601).}
 \item{end_date}{end date of time period as Ymd-format integer (ex:
 June 1, 2014 as 20140601).}
 
-\item{level}{level of event granularity ('eventcode' or 'rootcode').
-'Eventcode' creates a network for each of the 226 sub-codes in
-CAMEO. 'Rootcode' creates a network for each of the 20 event
-root codes in CAMEO.}
+\item{level}{level of event granularity ('eventcode', 'rootcode', or
+'pentaclass). 'Eventcode' creates a network for each of the
+226 sub-codes in CAMEO. 'Rootcode' creates a network for each
+of the 20 event root codes in CAMEO. 'Pentaclass' creates a
+network for each of the 0-4 pentaclass codes in CAMEO.}
 
 \item{phoenix_loc}{folder containing Phoenix data sets as daily .csv
 data tables. Automatically checks for new data sets each time

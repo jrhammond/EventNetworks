@@ -10,10 +10,11 @@
 #'          June 1, 2014 as 20140601).
 #' @param end_date end date of time period as Ymd-format integer (ex:
 #'          June 1, 2014 as 20140601).
-#' @param level level of event granularity ('eventcode' or 'rootcode').
-#'          'Eventcode' creates a network for each of the 226 sub-codes in
-#'          CAMEO. 'Rootcode' creates a network for each of the 20 event
-#'          root codes in CAMEO.
+#' @param level level of event granularity ('eventcode', 'rootcode', or
+#'           'pentaclass). 'Eventcode' creates a network for each of the
+#'           226 sub-codes in CAMEO. 'Rootcode' creates a network for each
+#'           of the 20 event root codes in CAMEO. 'Pentaclass' creates a
+#'           network for each of the 0-4 pentaclass codes in CAMEO.
 #' @param phoenix_loc folder containing Phoenix data sets as daily .csv
 #'          data tables. Automatically checks for new data sets each time
 #'          the function is run, and downloads new daily data as it becomes
@@ -59,7 +60,8 @@ phoenix_net <- function(start_date, end_date, level
                         , phoenix_loc, icews_loc
                         , actorset = 'states'
                         , codeset = 'all'
-                        , time_window = 'day'){
+                        , time_window = 'day'
+                        , code_subset = 'all'){
 
   ######
   #
@@ -259,6 +261,12 @@ phoenix_net <- function(start_date, end_date, level
   setnames(master_data, c('sourceactorentity', 'targetactorentity')
            , c('actora', 'actorb'))
 
+  ## Subset events: if a subset of EVENTCODES are specified, keep only that
+  ##  set of events and aggregate up from there.
+  if(!any('all' %in% codeset)){
+    master_data <- master_data[eventcode %in% code_subset]
+  }
+
   ## Create new variable: Pentaclass (0-4)
   master_data[rootcode %in% c(1, 2), pentaclass := 0L]
   master_data[rootcode %in% c(3, 4, 5), pentaclass := 1L]
@@ -342,6 +350,7 @@ phoenix_net <- function(start_date, end_date, level
 
   ## Set keys
   setkeyv(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
+
 
   ######
   #
