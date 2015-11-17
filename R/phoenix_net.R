@@ -33,6 +33,10 @@
 #'          in the 'level' argument. For example, if you specify 'rootcode',
 #'          the 'codeset' you specify has to be one or more root codes between
 #'          1 and 20. Defaults to 'all'.
+#' @param code_subset subset of EVENTCODES that can be aggregated up to higher
+#'          order interactions. For example, you might want to only look at
+#'          event codes below 100, but then aggregate those event codes to
+#'          rootcode or pentaclass.
 #' @param time_window temporal window to build event-networks. Valid
 #'          entries are 'day', 'week', 'month', or 'year'.
 #'
@@ -263,7 +267,7 @@ phoenix_net <- function(start_date, end_date, level
 
   ## Subset events: if a subset of EVENTCODES are specified, keep only that
   ##  set of events and aggregate up from there.
-  if(!any('all' %in% codeset)){
+  if(!any('all' %in% code_subset)){
     master_data <- master_data[eventcode %in% code_subset]
   }
 
