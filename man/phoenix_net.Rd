@@ -5,7 +5,8 @@
 \title{Convert Phoenix event data to daily event-networks.}
 \usage{
 phoenix_net(start_date, end_date, level, phoenix_loc, icews_loc,
-  actorset = "states", codeset = "all", time_window = "day")
+  actorset = "states", codeset = "all", time_window = "day",
+  code_subset = "all")
 }
 \arguments{
 \item{start_date}{start date of time period as Ymd-format integer (ex:
@@ -44,6 +45,11 @@ the 'codeset' you specify has to be one or more root codes between
 
 \item{time_window}{temporal window to build event-networks. Valid
 entries are 'day', 'week', 'month', or 'year'.}
+
+\item{code_subset}{subset of EVENTCODES that can be aggregated up to higher
+order interactions. For example, you might want to only look at
+event codes below 100, but then aggregate those event codes to
+rootcode or pentaclass.}
 }
 \value{
 master_networks a LIST object containing temporally referenced event-networks.

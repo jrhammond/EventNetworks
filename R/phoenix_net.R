@@ -39,6 +39,11 @@
 #'          rootcode or pentaclass.
 #' @param time_window temporal window to build event-networks. Valid
 #'          entries are 'day', 'week', 'month', or 'year'.
+#' @param tie_type type of ties to return. Default is binarized ties where
+#'          a tie represents the presence of one OR MORE interactions in the
+#'          time period specified. Valid entries are 'binary', 'count'
+#'          (count of events), or 'pct' (percentage of total events between
+#'          the two actors). Currently only 'binary' and 'count' implemented.
 #'
 #' @return master_networks a LIST object containing temporally referenced event-networks.
 #'
@@ -65,7 +70,8 @@ phoenix_net <- function(start_date, end_date, level
                         , actorset = 'states'
                         , codeset = 'all'
                         , time_window = 'day'
-                        , code_subset = 'all'){
+                        , code_subset = 'all'
+                        , tie_type = 'binary'){
 
   ######
   #
@@ -261,7 +267,13 @@ phoenix_net <- function(start_date, end_date, level
   #
   ######
 
-  master_data <- rbind(icews_data, phoenix_data)
+  try({
+    master_data <- rbind(icews_data, phoenix_data)
+  }, silent = T)
+  if(class(master_data)[1] == 'try-error'){
+    message('Specified range does not include Phoenix data.')
+    master_data <- icews_data
+  }
   setnames(master_data, c('sourceactorentity', 'targetactorentity')
            , c('actora', 'actorb'))
 
@@ -295,12 +307,6 @@ phoenix_net <- function(start_date, end_date, level
   # and dropping unused columns
   #
   ######
-
-  ## Aggregate dates to specified time window
-  master_data[, date := lubridate::floor_date(date, time_window)]
-
-  ## Subset events: keep only events within date range
-  master_data <- master_data[date %in% dates]
 
   ## Subset events and columns: only events that:
   ##  1. involve specified actor set on both side (as ENTITIES)
@@ -349,9 +355,6 @@ phoenix_net <- function(start_date, end_date, level
   ## Set CAMEO coded event/root codes to factors
   master_data[, code := factor(code, levels = codes)]
 
-  ## Subset events: drop duplicated events/days/actors
-  master_data <- master_data[!duplicated(master_data)]
-
   ## Set keys
   setkeyv(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
 
@@ -398,10 +401,25 @@ phoenix_net <- function(start_date, end_date, level
   ## Drop duplicated variables
   master_data <- unique(master_data)
 
+  ## Aggregate dates to specified time window
+  master_data[, date := lubridate::floor_date(date, time_window)]
+
+  ## Subset events: keep only events within date range
+  master_data <- master_data[date %in% dates]
+
+  ## Subset events
+  if(tie_type == 'binary'){
+    ## Subset events: drop duplicated events/days/actors
+    master_data <- master_data[!duplicated(master_data)]
+  } else if(tie_type == 'count'){
+    ## Subset events: drop duplicated events/days/actors
+    master_data <- master_data[, .N, by = list(date, actora, actorb, code)]
+  }
+
   ## Format for networkDynamic creation
   master_data[, date := as.integer(format(date, '%Y%m%d'))]
   master_data[, end_date := date]
-  setcolorder(master_data, c('date', 'end_date', 'actora', 'actorb', 'code'))
+  # setcolorder(master_data, c('date', 'end_date', 'actora', 'actorb', 'code'))
 
   ######
   #
@@ -416,7 +434,12 @@ phoenix_net <- function(start_date, end_date, level
   for(this_code in codes){
 
     ## Subset by root/event code
-    event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb)]
+    if(tie_type == 'binary'){
+      event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb)]
+    } else if(tie_type == 'count'){
+      event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb, N)]
+    }
+
 
     if(nrow(event_data) > 0){
       # event_data[, date := as.integer(format(date, '%Y%m%d'))]
@@ -425,17 +448,27 @@ phoenix_net <- function(start_date, end_date, level
       event_data[, actorb := as.integer(actorb)]
 
       ## Initialize the network size and characteristics
-      event_net <- network.initialize(n = n, directed = T, loops = F)
+      event_net <- network::network.initialize(n = n, directed = T, loops = F)
       network.vertex.names(event_net) <- levels(actors)
 
       ## Generate networkDynamic object
       net_period <- list(observations = list(c(min(dates), max(dates)))
                          , mode = 'discrete', time.increment = 1
                          , time.unit = 'step')
+      if(tie_type == 'binary'){
       temporal_codenet <- networkDynamic(base.net = event_net
                                          , edge.spells = event_data
                                          , net.obs.period = net_period
                                          , verbose = F)
+      } else if(tie_type == 'count'){
+        temporal_codenet <- networkDynamic(base.net = event_net
+                                           , edge.spells = event_data
+                                           , net.obs.period = net_period
+                                           , create.TEAs = T
+                                           , edge.TEA.names = 'N'
+                                           , verbose = F)
+      }
+
       ## Store list in master network list
       master_networks[paste0('code', this_code)] <- list(temporal_codenet)
     } else {
