@@ -6,7 +6,7 @@
 \usage{
 phoenix_net(start_date, end_date, level, phoenix_loc, icews_loc,
   actorset = "states", codeset = "all", time_window = "day",
-  code_subset = "all")
+  code_subset = "all", tie_type = "binary")
 }
 \arguments{
 \item{start_date}{start date of time period as Ymd-format integer (ex:
@@ -50,6 +50,12 @@ entries are 'day', 'week', 'month', or 'year'.}
 order interactions. For example, you might want to only look at
 event codes below 100, but then aggregate those event codes to
 rootcode or pentaclass.}
+
+\item{tie_type}{type of ties to return. Default is binarized ties where
+a tie represents the presence of one OR MORE interactions in the
+time period specified. Valid entries are 'binary', 'count'
+(count of events), or 'pct' (percentage of total events between
+the two actors). Currently only 'binary' and 'count' implemented.}
 }
 \value{
 master_networks a LIST object containing temporally referenced event-networks.
