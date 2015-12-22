@@ -6,18 +6,11 @@
 \title{ICEWS CAMEO actor codes}
 \format{An object of class \code{data.table} (inherits from \code{data.frame}) with 260 rows and 3 columns.}
 \usage{
-states
+data(states)
 }
 \description{
 Merge table to convert states to CAMEO format using conversion tables created
    by Phil Schrodt (https://github.com/philip-schrodt/text_to_CAMEO)
-}
-\details{
-@docType data
-
-@usage data(states)
-
-@keywords datasets
 }
 \keyword{datasets}
 
