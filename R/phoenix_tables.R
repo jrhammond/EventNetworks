@@ -237,6 +237,9 @@ phoenix_tables <- function(phoenix_loc, icews_loc){
   #
   ######
 
+  ## De-duplicate
+  master_data <- unique(master_data)
+
   ## Subset events and columns: only events that:
   ##  1. involve specified actor set on both side (as ENTITIES)
   ##  2. involve TWO DIFFERENT actors (i.e. no self-interactions
@@ -253,7 +256,7 @@ phoenix_tables <- function(phoenix_loc, icews_loc){
   master_data[, pentaclass := factor(pentaclass, levels = pentaclasses)]
 
   ## Set keys
-  setkeyv(master_data, c('date', 'actora', 'actorb', 'eventcode'))
+  setkeyv(master_data, c('date', 'actora', 'actorb', 'eventcode', 'source'))
 
 
   ######
