@@ -32,7 +32,7 @@
 #' @import plyr
 #' @import lubridate
 #' @import phoxy
-phoenix_tables <- function(phoenix_loc, icews_loc){
+phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
 
   ######
   #
@@ -124,9 +124,11 @@ phoenix_tables <- function(phoenix_loc, icews_loc){
   ##  archive the first time this function is run and fully populate
   ##  the destination folder.
 
-  message('Checking Phoenix data...')
-  # library(phoxy)
-  phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
+  if(update == T){
+    message('Checking Phoenix data...')
+    phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
+  }
+
 
   ## Check to see if ICEWS folder exists and that it has at least one 'valid'
   ##  ICEWS data table stored.
