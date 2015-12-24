@@ -252,9 +252,10 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
   master_data[, actora := factor(actora, levels = levels(actors))]
   master_data[, actorb := factor(actorb, levels = levels(actors))]
 
-  ## Set CAMEO coded event/root codes to factors
-  master_data[, rootcode := factor(rootcode, levels = rootcodes)]
-  master_data[, eventcode := factor(eventcode, levels = eventcodes)]
+  ## Set CAMEO coded event/root codes to integers
+  master_data[, rootcode := as.integer(rootcode)]
+  master_data$eventcode <- gsub('!', '', master_data$eventcode)
+  master_data[, eventcode := as.integer(eventcode)]
   master_data[, pentaclass := factor(pentaclass, levels = pentaclasses)]
 
   ## Set keys
@@ -269,9 +270,9 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
 
   ## Create some temporary flag variables
   master_data[, dup_fromtop := duplicated(
-    master_data[, list(date, actora, actorb, eventcode)])]
+    master_data[, list(date, actora, actorb, rootcode, eventcode)])]
   master_data[, dup_frombot := duplicated(
-    master_data[, list(date, actora, actorb, eventcode)], fromLast = T)]
+    master_data[, list(date, actora, actorb, rootcode, eventcode)], fromLast = T)]
 
   ## Export data on reporting overlap
   # Phoenix reporting only
