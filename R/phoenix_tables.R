@@ -32,6 +32,7 @@
 #' @import plyr
 #' @import lubridate
 #' @import phoxy
+#' @import dummies
 phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
 
   ######
@@ -41,7 +42,7 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
   ######
 
   ## Date objects
-  start_date <- as.Date('2013-01-01')
+  start_date <- as.Date('1995-01-01')
   end_date <- Sys.Date()
   dates <- seq.Date(start_date, end_date, by = 'day')
 
@@ -252,10 +253,10 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
   master_data[, actora := factor(actora, levels = levels(actors))]
   master_data[, actorb := factor(actorb, levels = levels(actors))]
 
-  ## Set CAMEO coded event/root codes to integers
-  master_data[, rootcode := as.integer(rootcode)]
+  ## Set CAMEO coded event/root codes to factors
+  master_data[, rootcode := factor(rootcode, levels = rootcodes)]
   master_data$eventcode <- gsub('!', '', master_data$eventcode)
-  master_data[, eventcode := as.integer(eventcode)]
+  master_data[, eventcode := factor(as.integer(eventcode), levels = eventcodes)]
   master_data[, pentaclass := factor(pentaclass, levels = pentaclasses)]
 
   ## Set keys
@@ -307,5 +308,11 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
   ## Subset events: keep only events within date range
   master_data <- master_data[date %in% dates]
 
-  return(list(diagnostics = sources_overlap, netdata = master_data))
+  ## Create list of all actors in data set for output
+  main_actors <- actors[!actors %in% statelist]
+
+  ## BIG DUMMY SECTION: dummy out all categorical event/root/pentaclass codes
+  test <- data.table(dummy.data.frame(master_data, names = c('pentaclass', 'rootcode', 'eventcode')))
+
+  return(list(diagnostics = sources_overlap, netdata = master_data, actorlist = main_actors))
 }
