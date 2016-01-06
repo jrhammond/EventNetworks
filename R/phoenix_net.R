@@ -23,6 +23,8 @@
 #' @param icews_loc folder containing ICEWS data sets as daily .tab data
 #'          tables. Because I don't know how to work a SWORD API, these will
 #'          need to be manually downloaded and updated.
+#' @param update Whether or not to attempt to update Phoenix data from the
+#'          daily repositories (currently at phoenixdata.org). Defaults to TRUE.
 #' @param actorset set of actors for which to create event-networks. Defaults
 #'          to the 255 ISO-coded states in the international system. Specifying
 #'          a specific state or set of states (as 3-character ISO codes) will
@@ -67,6 +69,7 @@
 #' @import phoxy
 phoenix_net <- function(start_date, end_date, level
                         , phoenix_loc, icews_loc
+                        , update = TRUE
                         , actorset = 'states'
                         , codeset = 'all'
                         , time_window = 'day'
@@ -194,13 +197,10 @@ phoenix_net <- function(start_date, end_date, level
   ##  archive the first time this function is run and fully populate
   ##  the destination folder.
 
-  ## NOTE: This currently requires a clumsy step where it reinstalls phoxy
-  ##      every time the code is run. This should be cleaned up, but I'm not
-  ##      100% sure how to do so in a way that's both accurate and polite.
-
-  message('Checking Phoenix data...')
-  # library(phoxy)
-  phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
+  if(update == T){
+    message('Checking Phoenix data...')
+    phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
+  }
 
   ## Check to see if ICEWS folder exists and that it has at least one 'valid'
   ##  ICEWS data table stored.

@@ -26,10 +26,6 @@
 #'
 #' @import data.table
 #' @import countrycode
-#' @import reshape2
-#' @import statnet
-#' @import tsna
-#' @import plyr
 #' @import lubridate
 #' @import phoxy
 #' @import dummies
@@ -312,7 +308,7 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
   main_actors <- actors[!actors %in% statelist]
 
   ## BIG DUMMY SECTION: dummy out all categorical event/root/pentaclass codes
-  test <- data.table(dummy.data.frame(master_data, names = c('pentaclass', 'rootcode', 'eventcode')))
+  master_data <- data.table(dummy.data.frame(master_data, names = c('pentaclass', 'rootcode', 'eventcode')))
 
   return(list(diagnostics = sources_overlap, netdata = master_data, actorlist = main_actors))
 }
