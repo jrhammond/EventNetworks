@@ -240,40 +240,49 @@ phoenix_net <- function(start_date, end_date, level
   #
   ######
 
-  ## Read and parse Phoenix data
-  message('Ingesting Phoenix data...')
-  phoenix_data <- phoxy::ingest_phoenix(phoenix_loc = phoenix_loc
-                                       , start_date = start_date
-                                       , end_date = end_date)
+  ## Only parse Phoenix if it exists in the date range specified
+  if(end_date < as.Date('2014-06-20')){
+    phoenix_data <- data.table(date = as.Date(character())
+                               , sourceactorentity = character()
+                               , targetactorentity = character()
+                               , rootcode = numeric()
+                               , eventcode = integer()
+                               , goldstein = numeric()
+                               , 'source' = character())
+    message('Specified date range lies before Phoenix data coverage begins.')
+  } else{
 
-  ## Subset Phoenix data to only keep key columns
-  phoenix_data <- phoenix_data[, list(date, paste3(sourceactorentity
-                                                   , sourceactorrole, sep = '')
-                                      , paste3(targetactorentity
-                                               , targetactorrole, sep = '')
-                                      , rootcode, eventcode, goldstein)]
-  setnames(phoenix_data, c('V2', 'V3')
-           , c('sourceactorentity', 'targetactorentity'))
-  phoenix_data[, source := 'phoenix']
+    ## Read and parse Phoenix data
+    message('Ingesting Phoenix data...')
+    phoenix_data <- phoxy::ingest_phoenix(phoenix_loc = phoenix_loc
+                                          , start_date = start_date
+                                          , end_date = end_date)
 
-  ## Drop any missing data
-  phoenix_data <- phoenix_data[!is.na(rootcode)]
-  phoenix_data <- phoenix_data[!is.na(eventcode)]
-  phoenix_data <- phoenix_data[!is.na(goldstein)]
+    ## Subset Phoenix data to only keep key columns
+    phoenix_data <- phoenix_data[, list(date, paste3(sourceactorentity
+                                                     , sourceactorrole, sep = '')
+                                        , paste3(targetactorentity
+                                                 , targetactorrole, sep = '')
+                                        , rootcode, eventcode, goldstein)]
+    setnames(phoenix_data, c('V2', 'V3')
+             , c('sourceactorentity', 'targetactorentity'))
+    phoenix_data[, source := 'phoenix']
+
+    ## Drop any missing data
+    phoenix_data <- phoenix_data[!is.na(rootcode)]
+    phoenix_data <- phoenix_data[!is.na(eventcode)]
+    phoenix_data <- phoenix_data[!is.na(goldstein)]
+
+  }
 
   ######
   #
   # Combine ICEWS and Phoenix data
   #
   ######
-
-  try({
-    master_data <- rbind(icews_data, phoenix_data)
-  }, silent = T)
-  if(class(master_data)[1] == 'try-error'){
-    message('Specified range does not include Phoenix data.')
-    master_data <- icews_data
-  }
+  message(str(icews_data))
+  message(str(phoenix_data))
+  master_data <- rbind(icews_data, phoenix_data)
   setnames(master_data, c('sourceactorentity', 'targetactorentity')
            , c('actora', 'actorb'))
 

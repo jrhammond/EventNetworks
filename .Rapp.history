@@ -1,0 +1,13 @@
+devtools::install_github("jrhammond/phoenixNet")
+library(phoenixNet)
+?phoenix_net
+?phoenix_net
+install.packages(phoenixNet, repos="~/Dropbox/Minerva/phoenixNet")
+install.packages(phoenixNet, repos="~/Dropbox/Minerva")
+cd("~/Dropbox/Minerva/phoenixNet")
+setwd("~/Dropbox/Minerva/phoenixNet")
+library(devtools)
+build()
+install()
+library(phoenixNet)
+?phoenix_net
