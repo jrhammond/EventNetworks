@@ -27,7 +27,6 @@
 #' @import data.table
 #' @import countrycode
 #' @import lubridate
-#' @import phoxy
 #' @import dummies
 phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
 
@@ -123,7 +122,7 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
 
   if(update == T){
     message('Checking Phoenix data...')
-    phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
+    update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
   }
 
 
@@ -146,7 +145,7 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
 
   ## Read and parse ICEWS data
   message('Ingesting ICEWS data...')
-  icews_data <- phoxy::ingest_icews(icews_loc, start_date, end_date)
+  icews_data <- ingest_icews(icews_loc, start_date, end_date)
 
   ## Clean ICEWS data and format to Phoenix-style CAMEO codes
   ##  for actors and states
@@ -178,7 +177,7 @@ phoenix_tables <- function(phoenix_loc, icews_loc, update = T){
 
   ## Read and parse Phoenix data
   message('Ingesting Phoenix data...')
-  phoenix_data <- phoxy::ingest_phoenix(phoenix_loc = phoenix_loc
+  phoenix_data <- ingest_phoenix(phoenix_loc = phoenix_loc
                                         , start_date = start_date
                                         , end_date = end_date)
 

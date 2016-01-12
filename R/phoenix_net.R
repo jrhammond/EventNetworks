@@ -66,7 +66,6 @@
 #' @import tsna
 #' @import plyr
 #' @import lubridate
-#' @import phoxy
 phoenix_net <- function(start_date, end_date, level
                         , phoenix_loc, icews_loc
                         , update = TRUE
@@ -199,18 +198,7 @@ phoenix_net <- function(start_date, end_date, level
 
   if(update == T){
     message('Checking Phoenix data...')
-    phoxy::update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
-  }
-
-  ## Check to see if ICEWS folder exists and that it has at least one 'valid'
-  ##  ICEWS data table stored.
-  message('Checking ICEWS data...')
-  icews_checkfile <- 'events.2000.20150313082808.tab'
-  icews_files <- list.files(icews_loc)
-  if(!icews_checkfile %in% icews_files){
-    stop('Please enter a valid path that contains the ICEWS yearly files.')
-  } else {
-    message('ICEWS file location is valid.')
+    update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
   }
 
   ######
@@ -219,20 +207,41 @@ phoenix_net <- function(start_date, end_date, level
   #
   ######
 
-  ## Read and parse ICEWS data
-  message('Ingesting ICEWS data...')
-  icews_data <- phoxy::ingest_icews(icews_loc, start_date, end_date)
+  ## Check to see if ICEWS folder exists and that it has at least one 'valid'
+  ##  ICEWS data table stored.
+  years <- format(unique(lubridate::floor_date(dates, 'year')), '%Y')
+  message('Checking ICEWS data...')
+  icews_files <- list.files(icews_loc)
+  icews_years <- ldply(strsplit(icews_files, '\\.'))$V2
+  access_years <- which(icews_years %in% years)
 
-  ## Clean ICEWS data and format to Phoenix-style CAMEO codes
-  ##  for actors and states
-  message('Munging ICEWS data...')
-  icews_data <- icews_cameo(icews_data)
+  if(length(access_years) == 0){
+    message('No ICEWS files found in the specified timespan.')
+    icews_data <- data.table(date = as.Date(character())
+                               , sourceactorentity = character()
+                               , targetactorentity = character()
+                               , rootcode = numeric()
+                               , eventcode = integer()
+                               , goldstein = numeric()
+                               , 'source' = character())
+  } else{
 
-  ## Subset ICEWS data to only keep key columns
-  icews_data <- icews_data[, list(date, sourceactorentity
-                                  , targetactorentity, rootcode
-                                  , eventcode, goldstein)]
-  icews_data[, source := 'icews']
+    ## Read and parse ICEWS data
+    message('Ingesting ICEWS data...')
+    icews_data <- ingest_icews(icews_loc, start_date, end_date)
+
+    ## Clean ICEWS data and format to Phoenix-style CAMEO codes
+    ##  for actors and states
+    message('Munging ICEWS data...')
+    icews_data <- icews_cameo(icews_data)
+
+    ## Subset ICEWS data to only keep key columns
+    icews_data <- icews_data[, list(date, sourceactorentity
+                                    , targetactorentity, rootcode
+                                    , eventcode, goldstein)]
+    icews_data[, source := 'icews']
+
+  }
 
   ######
   #
@@ -249,12 +258,12 @@ phoenix_net <- function(start_date, end_date, level
                                , eventcode = integer()
                                , goldstein = numeric()
                                , 'source' = character())
-    message('Specified date range lies before Phoenix data coverage begins.')
+    message('Specified timespan ends before Phoenix data coverage begins.')
   } else{
 
     ## Read and parse Phoenix data
     message('Ingesting Phoenix data...')
-    phoenix_data <- phoxy::ingest_phoenix(phoenix_loc = phoenix_loc
+    phoenix_data <- ingest_phoenix(phoenix_loc = phoenix_loc
                                           , start_date = start_date
                                           , end_date = end_date)
 
@@ -280,9 +289,10 @@ phoenix_net <- function(start_date, end_date, level
   # Combine ICEWS and Phoenix data
   #
   ######
-  message(str(icews_data))
-  message(str(phoenix_data))
   master_data <- rbind(icews_data, phoenix_data)
+  if(nrow(master_data) == 0){
+    stop('No Phoenix or ICEWS data available for the specified timespan.')
+  }
   setnames(master_data, c('sourceactorentity', 'targetactorentity')
            , c('actora', 'actorb'))
 
