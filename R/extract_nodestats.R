@@ -23,7 +23,6 @@
 #'
 #' @export
 
-
 extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
 
   ######
@@ -72,7 +71,7 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
 
   ## Degree
   # Indegree
-  indegree_dist <- matrix(sna::degree(as.matrix.network(event_dnet)
+  indegree_dist <- matrix(sna::degree(as.matrix.network(net_obj)
                                       , cmode = 'indegree'
                                       , rescale = T), nrow = 1)
   indegree_dist[is.nan(indegree_dist)] <- 0
@@ -81,7 +80,7 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
                                        , node_stat = 'indegree', indegree_dist))
 
   # Outdegree
-  outdegree_dist <- matrix(sna::degree(as.matrix.network(event_dnet)
+  outdegree_dist <- matrix(sna::degree(as.matrix.network(net_obj)
                                        , cmode = 'outdegree'
                                        , rescale = T), nrow = 1)
   outdegree_dist[is.nan(outdegree_dist)] <- 0
@@ -90,7 +89,7 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
                                         , node_stat = 'outdegree', outdegree_dist))
 
   ## Betweenness
-  between_dist <- matrix(sna::betweenness(as.matrix.network(event_dnet)
+  between_dist <- matrix(sna::betweenness(as.matrix.network(net_obj)
                                           , gmode = 'digraph'
                                           , rescale = T), nrow = 1)
   between_dist[is.nan(between_dist)] <- 0

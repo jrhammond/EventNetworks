@@ -5,8 +5,8 @@
 \title{Convert Phoenix event data to daily event-networks.}
 \usage{
 phoenix_net(start_date, end_date, level, phoenix_loc, icews_loc,
-  actorset = "states", codeset = "all", time_window = "day",
-  code_subset = "all", tie_type = "binary")
+  update = TRUE, actorset = "states", codeset = "all",
+  time_window = "day", code_subset = "all", tie_type = "binary")
 }
 \arguments{
 \item{start_date}{start date of time period as Ymd-format integer (ex:
@@ -30,6 +30,9 @@ where it downloads the first time, and checks thereafter.}
 \item{icews_loc}{folder containing ICEWS data sets as daily .tab data
 tables. Because I don't know how to work a SWORD API, these will
 need to be manually downloaded and updated.}
+
+\item{update}{Whether or not to attempt to update Phoenix data from the
+daily repositories (currently at phoenixdata.org). Defaults to TRUE.}
 
 \item{actorset}{set of actors for which to create event-networks. Defaults
 to the 255 ISO-coded states in the international system. Specifying
