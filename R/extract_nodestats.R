@@ -97,7 +97,17 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
   between_dist <- as.data.table(cbind(date = input_date
                                       , node_stat = 'between', between_dist))
 
+  ## Reciprocity
+  recip_mat <- as.matrix.network(net_obj)
+  recip_fun <- function(position, x){
+    return(sum(x[position, ] == x[, position]))
+  }
+  recip_dist <- matrix(sapply(1:nrow(recip_mat), recip_fun, recip_mat) / nrow(recip_mat)
+                       , nrow = 1)
+  dimnames(recip_dist)[[2]] <- nodes
+  recip_dist <- as.data.table(cbind(date = input_date
+                              , node_stat = 'recip', recip_dist))
 
   return(data.table(rbind(trans_dist, indegree_dist
-                         , outdegree_dist, between_dist)))
+                         , outdegree_dist, between_dist, recip_dist)))
 }
