@@ -108,6 +108,12 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
   recip_dist <- as.data.table(cbind(date = input_date
                               , node_stat = 'recip', recip_dist))
 
-  return(data.table(rbind(trans_dist, indegree_dist
-                         , outdegree_dist, between_dist, recip_dist)))
+  ## Combined metric
+  out_data <- data.table(rbind(trans_dist, indegree_dist
+                               , outdegree_dist, between_dist, recip_dist))
+  out_data[, combined := sum(abs(trans_dist), abs(indegree_dist), abs(outdegree_dist)
+                             , abs(between_dist), abs(recip_dist))]
+  out_data[, combined2 := sum((trans_dist+1)^2, (indegree_dist+1)^2, (outdegree_dist+1)^2
+                             , (between_dist+1)^2, (recip_dist+1)^2)]
+  return(out_data)
 }
