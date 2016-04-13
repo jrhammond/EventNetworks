@@ -111,9 +111,16 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
   ## Combined metric
   out_data <- data.table(rbind(trans_dist, indegree_dist
                                , outdegree_dist, between_dist, recip_dist))
-  out_data[, combined := sum(abs(trans_dist), abs(indegree_dist), abs(outdegree_dist)
-                             , abs(between_dist), abs(recip_dist))]
-  out_data[, combined2 := sum((trans_dist+1)^2, (indegree_dist+1)^2, (outdegree_dist+1)^2
-                             , (between_dist+1)^2, (recip_dist+1)^2)]
+
+  dtnew <- out_data[, lapply(.SD, as.numeric)]
+  dtnew[, node_stat := out_data$node_stat]
+  out_data <- dtnew
+  combined <- as.data.table(cbind(date = input_date, node_stat = 'combined1'
+                                  , matrix(colSums(as.data.frame(out_data)[, -c(1:2)]), nrow = 1)))
+  combined2 <- as.data.table(cbind(date = input_date, node_stat = 'combined2'
+                                   , matrix(colSums(((as.data.frame(out_data)[, -c(1:2)])+1)^2), nrow = 1)))
+  setnames(combined, names(combined)[-c(1:2)], names(between_dist)[-c(1:2)])
+  setnames(combined2, names(combined2)[-c(1:2)], names(between_dist)[-c(1:2)])
+  out_data <- rbind(out_data, combined, combined2)
   return(out_data)
 }
