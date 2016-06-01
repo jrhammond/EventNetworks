@@ -6,7 +6,8 @@
 \usage{
 phoenix_net(start_date, end_date, level, phoenix_loc, icews_loc,
   update = TRUE, actorset = "states", codeset = "all",
-  time_window = "day", code_subset = "all", tie_type = "binary")
+  time_window = "day", code_subset = "all", tie_type = "binary",
+  sources = "both")
 }
 \arguments{
 \item{start_date}{start date of time period as Ymd-format integer (ex:

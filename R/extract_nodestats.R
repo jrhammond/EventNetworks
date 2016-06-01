@@ -113,14 +113,26 @@ extract_nodestats <- function(input_date = this_date, event_dnet = tsna_obj){
                                , outdegree_dist, between_dist, recip_dist))
 
   dtnew <- out_data[, lapply(.SD, as.numeric)]
+  # dtnew2 <- dtnew[, lapply(.SD, scale)]
+  dtnew2 <- copy(dtnew)
+  dtnew2[, date := NULL]
+  dtnew2[, node_stat := NULL]
+  dtnew2 <- data.frame(dtnew2)
+  dtnew2 <- abs(dtnew2)
+  for(i in 1:nrow(dtnew2)){
+    dtnew2[i, ] <- scale(as.matrix(dtnew2)[i,])
+  }
   dtnew[, node_stat := out_data$node_stat]
   out_data <- dtnew
   combined <- as.data.table(cbind(date = input_date, node_stat = 'combined1'
-                                  , matrix(colSums(as.data.frame(out_data)[, -c(1:2)]), nrow = 1)))
+                                  , matrix(colSums(dtnew2), nrow = 1)))
   combined2 <- as.data.table(cbind(date = input_date, node_stat = 'combined2'
-                                   , matrix(colSums(((as.data.frame(out_data)[, -c(1:2)])+1)^2), nrow = 1)))
+                                   , matrix(colSums(((dtnew2)+1)^2), nrow = 1)))
   setnames(combined, names(combined)[-c(1:2)], names(between_dist)[-c(1:2)])
   setnames(combined2, names(combined2)[-c(1:2)], names(between_dist)[-c(1:2)])
   out_data <- rbind(out_data, combined, combined2)
+  dtnew <- out_data[, lapply(.SD, as.numeric)]
+  dtnew[, node_stat := out_data$node_stat]
+  out_data <- dtnew
   return(out_data)
 }
