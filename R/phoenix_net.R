@@ -89,7 +89,7 @@ phoenix_net <- function(start_date, end_date, level
     end_date <- as.Date(lubridate::ymd(end_date))
   }
   dates <- seq.Date(start_date, end_date, by = 'day')
-  dates <- unique(lubridate::round_date(dates, time_window))
+  dates <- unique(lubridate::floor_date(dates, time_window))
 
   ######
   #
