@@ -7,7 +7,7 @@
 #' @param phoenix_version. Download a specific version of Phoenix ("v0.1.0" or the current version by default).
 #'
 #' @return NULL
-#' @author Andy Halterman
+#' @author Original code credit: Andy Halterman
 #' @note This function, like Phoenix, is still in development and may contain errors and change quickly.
 #' @examples
 #'
@@ -16,53 +16,96 @@
 #' @rdname download_phoenix
 
 
-# get all the URLs on a page
-get_links <- function (phoenix_version = 'current') {
-  phoenix_version <- gsub('.', '', phoenix_version, fixed = T) # remove dots
+## Function 1:
+##    Process the start/end dates desired, and generate a list of
+##    data links to try and download.
+get_links <- function(
+  start_date = as.Date('2014-06-20')
+  , end_date = Sys.Date()
+) {
 
-  # check version user input, either 'current' or up to 3 digits
-  # with optional 'v' in the beginning
-  if (!grepl('(current|v?\\d{,3})', phoenix_version)) stop('Incorrect version name.')
+  # Create a range of dates for which to download Phoenix data.
+  dates <- seq.Date(
+    start_date
+    , end_date
+    , by = 'day'
+  )
+  dates <- as.integer(format(dates, '%Y%m%d'))
 
-  if (!grepl('^(v|current)', phoenix_version)) # if the user submitted a version without 'v'
-    phoenix_version <- paste0('v', phoenix_version)
-
-  # Access the Phoenix API. http://xkcd.com/1481/
-  url <- paste0('http://phoenixdata.org/data/', phoenix_version)
-  page <- XML::htmlParse(url)
-  all_links <- as.vector(XML::xpathSApply(page, "//a/@href")) # xpath to extract url strings
-  links <- all_links[grepl('zip$', all_links)] # only links ending with "zip"
+  # Access the Phoenix raw data from Amazon repository.
+  links <- paste0(
+    'https://s3.amazonaws.com/oeda/data/current/events.full.'
+    , dates
+    , '.txt.zip'
+  )
 
   return(links)
 }
 
-
-# given a link, download the file and write it to the specified directory
+### Function 2:
+##    Given a single link, try to download that specific Phoenix data file.
+##    If that day's data is not available, notify the user with an error message.
 dw_file <- function(link, destpath) {
   # extract filename from link
   m <- regexpr('[^/]*(?=\\.zip$)', link, perl = T)
   filename <- regmatches(link, m)
 
-  # remove trailing filepath separator to destpath if it's there
-  destpath <- gsub(paste0(.Platform$file.sep, '$'), '', destpath)
-
   # download method
-  if (.Platform$OS.type == 'windows')
+  if (.Platform$OS.type == 'windows') {
     download_method <- 'auto'
-  else
+  } else{
     download_method <- 'curl'
+  }
 
-  # download and unzip to destpath
+  # Attempt to download and unzip to destpath
   temp <- tempfile()
   download.file(link, temp, method = download_method, quiet = T)
-  unzip(temp, exdir = destpath)
+  options(warn = 2)
+
+  tryCatch(
+    unzip(temp, exdir = destpath)
+    , error = function(e){
+      message(
+        paste(
+          'Unable to download file '
+          , filename
+          , '. It appears that Phoenix data for this date is missing.'
+          , sep = ''
+        )
+      )
+    }
+  )
+
+  options(warn = 1)
   unlink(temp)
 }
 
+
+###' Function 3:
+#'    A 'wrapper' function that calls the previous two functions. This automates
+#'    the generation and processing of individual "download" jobs, automatically
+#'    attempting to download an entire set of Phoenix daily data files given
+#'    the desired date range.
 #' @export
 #' @importFrom plyr l_ply progress_text
-download_phoenix <- function(destpath, phoenix_version = 'current'){
-  links <- get_links(phoenix_version = phoenix_version)
-  message("Downloading and unzipping files.")
-  plyr::l_ply(links, dw_file, destpath = destpath, .progress = plyr::progress_text(char = '='))
+#'
+download_phoenix <- function(
+  destpath = paste0(getwd(), '/phoenix')
+) {
+
+  ## Create links via function 1
+  links <- get_links(
+    start_date = start_date
+    , end_date = end_date
+  )
+
+  message(paste0("Downloading and unzipping files to ", destpath, '/'))
+
+  ## Download links via function 2
+  plyr::l_ply(
+    links
+    , dw_file
+    , destpath = destpath
+    , .progress = plyr::progress_text(char = '=')
+  )
 }

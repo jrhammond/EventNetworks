@@ -32,8 +32,11 @@ where it downloads the first time, and checks thereafter.}
 tables. Because I don't know how to work a SWORD API, these will
 need to be manually downloaded and updated.}
 
-\item{update}{Whether or not to attempt to update Phoenix data from the
-daily repositories (currently at phoenixdata.org). Defaults to TRUE.}
+\item{update}{should phoenixNet attempt to download new data? This will attempt
+to download any Phoenix data files that 'should' be present in the
+Phoenix data directory (one data file per day, from 2014-06-20 through
+the present day) and denote whether or not any of these files
+come up missing in the process.}
 
 \item{actorset}{set of actors for which to create event-networks. Defaults
 to the 255 ISO-coded states in the international system. Specifying
@@ -60,6 +63,9 @@ a tie represents the presence of one OR MORE interactions in the
 time period specified. Valid entries are 'binary', 'count'
 (count of events), or 'pct' (percentage of total events between
 the two actors). Currently only 'binary' and 'count' implemented.}
+
+\item{sources}{use only Phoenix or ICEWS data in creating event networks.
+Valid entries are 'phoenix', 'icews', or 'both' (default).}
 }
 \value{
 master_networks a LIST object containing temporally referenced event-networks.

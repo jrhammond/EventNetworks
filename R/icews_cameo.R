@@ -52,7 +52,7 @@ icews_cameo <- function(icews){
   cameo_convert <- function(sector){
     this_source <- data.table(actor = unlist(strsplit(sector, ',')))
     this_codes <- merge(agents, this_source, sort = F, by = 'actor')
-    if(any(this_codes[, code1] %in% agentcodes)){
+    if(any(sapply(this_codes[, code1], 'substr', 1, 3) %in% agentcodes)){
       return(agentcodes[min(which(agentcodes %in% this_codes[,code1]))])
     } else{
       return(NA_character_)

@@ -23,8 +23,11 @@
 #' @param icews_loc folder containing ICEWS data sets as daily .tab data
 #'          tables. Because I don't know how to work a SWORD API, these will
 #'          need to be manually downloaded and updated.
-#' @param update Whether or not to attempt to update Phoenix data from the
-#'          daily repositories (currently at phoenixdata.org). Defaults to TRUE.
+#' @param update should phoenixNet attempt to download new data? This will attempt
+#'          to download any Phoenix data files that 'should' be present in the
+#'          Phoenix data directory (one data file per day, from 2014-06-20 through
+#'          the present day) and denote whether or not any of these files
+#'          come up missing in the process.
 #' @param actorset set of actors for which to create event-networks. Defaults
 #'          to the 255 ISO-coded states in the international system. Specifying
 #'          a specific state or set of states (as 3-character ISO codes) will
@@ -46,6 +49,8 @@
 #'          time period specified. Valid entries are 'binary', 'count'
 #'          (count of events), or 'pct' (percentage of total events between
 #'          the two actors). Currently only 'binary' and 'count' implemented.
+#' @param sources use only Phoenix or ICEWS data in creating event networks.
+#'          Valid entries are 'phoenix', 'icews', or 'both' (default).
 #'
 #' @return master_networks a LIST object containing temporally referenced event-networks.
 #'
@@ -208,41 +213,52 @@ phoenix_net <- function(start_date, end_date, level
   #
   ######
 
-  ## Check to see if ICEWS folder exists and that it has at least one 'valid'
-  ##  ICEWS data table stored.
-  years <- format(unique(lubridate::floor_date(dates, 'year')), '%Y')
-  message('Checking ICEWS data...')
-  icews_files <- list.files(icews_loc)
-  icews_years <- ldply(strsplit(icews_files, '\\.'))$V2
-  access_years <- which(icews_years %in% years)
+  if (sources %in% c('icews', 'both')){
+    ## Check to see if ICEWS folder exists and that it has at least one 'valid'
+    ##  ICEWS data table stored.
+    years <- format(unique(lubridate::floor_date(dates, 'year')), '%Y')
+    message('Checking ICEWS data...')
+    icews_files <- list.files(icews_loc)
+    icews_years <- ldply(strsplit(icews_files, '\\.'))$V2
+    access_years <- which(icews_years %in% years)
 
-  if(length(access_years) == 0){
-    message('No ICEWS files found in the specified timespan.')
-    icews_data <- data.table(date = as.Date(character())
+    if(length(access_years) == 0){
+      message('No ICEWS files found in the specified timespan.')
+      icews_data <- data.table(date = as.Date(character())
                                , sourceactorentity = character()
                                , targetactorentity = character()
                                , rootcode = numeric()
                                , eventcode = integer()
                                , goldstein = numeric()
                                , 'source' = character())
-  } else{
+    } else{
 
-    ## Read and parse ICEWS data
-    message('Ingesting ICEWS data...')
-    icews_data <- ingest_icews(icews_loc, start_date, end_date)
+      ## Read and parse ICEWS data
+      message('Ingesting ICEWS data...')
+      icews_data <- ingest_icews(icews_loc, start_date, end_date)
 
-    ## Clean ICEWS data and format to Phoenix-style CAMEO codes
-    ##  for actors and states
-    message('Munging ICEWS data...')
-    icews_data <- icews_cameo(icews_data)
+      ## Clean ICEWS data and format to Phoenix-style CAMEO codes
+      ##  for actors and states
+      message('Munging ICEWS data...')
+      icews_data <- icews_cameo(icews_data)
 
-    ## Subset ICEWS data to only keep key columns
-    icews_data <- icews_data[, list(date, sourceactorentity
-                                    , targetactorentity, rootcode
-                                    , eventcode, goldstein)]
-    icews_data[, source := 'icews']
+      ## Subset ICEWS data to only keep key columns
+      icews_data <- icews_data[, list(date, sourceactorentity
+                                      , targetactorentity, rootcode
+                                      , eventcode, goldstein)]
+      icews_data[, source := 'icews']
 
+    }
+  } else {
+    icews_data <- data.table(date = as.Date(character())
+                             , sourceactorentity = character()
+                             , targetactorentity = character()
+                             , rootcode = numeric()
+                             , eventcode = integer()
+                             , goldstein = numeric()
+                             , 'source' = character())
   }
+
 
   ######
   #
@@ -266,7 +282,7 @@ phoenix_net <- function(start_date, end_date, level
     setnames(master_data, c('sourceactorentity', 'targetactorentity')
              , c('actora', 'actorb'))
 
-  } else if (sources == 'both'){
+  } else {
 
     if(end_date < as.Date('2014-06-20')){
       ## Only parse Phoenix data if it exists in that date range
@@ -306,11 +322,13 @@ phoenix_net <- function(start_date, end_date, level
       phoenix_data <- phoenix_data[!is.na(eventcode)]
       phoenix_data <- phoenix_data[!is.na(goldstein)]
 
+
       ######
       #
       # Combine ICEWS and Phoenix data
       #
       ######
+
       master_data <- rbind(icews_data, phoenix_data)
       if(nrow(master_data) == 0){
         stop('No Phoenix or ICEWS data available for the specified timespan.')

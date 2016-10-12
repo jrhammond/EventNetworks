@@ -15,7 +15,7 @@
 #'          network layers created via 'phoenix_net'. If you specify rootcodes
 #'          in the creation step, entering pentaclass codes in this step
 #'          will produce an error.
-#' @param do_parallel Logical TRUE/FALSE. Whether to use parallel backend
+#' @param do_parallel Logical TRUE-FALSE. Whether to use parallel backend
 #'          'doMC' when extracting network statistics by code. Considerably
 #'          faster than single-core, but less reliable.
 #'
