@@ -204,7 +204,9 @@ phoenix_net <- function(start_date, end_date, level
 
   if(update == T){
     message('Checking Phoenix data...')
-    update_phoenix(destpath = phoenix_loc, phoenix_version = 'current')
+    phoenixNet::update_phoenix(destpath = phoenix_loc)
+    message('Checking ICEWS data...')
+    phoenixNet::update_icews(destpath = icews_loc)
   }
 
   ######

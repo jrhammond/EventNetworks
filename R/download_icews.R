@@ -1,12 +1,12 @@
 #' Download the ICEWS Dataset
 #'
-#' Download and unzip all of the data files for the ICEWS dataset from the 
+#' Download and unzip all of the data files for the ICEWS dataset from the
 #' Harvard Dataverse into a given directory.
 #'
 #' @param destpath The path to the directory where ICEWS should go.
 #'
 #' @return NULL
-#' @author Tony Boyles
+#' @author Original code and concept: Tony Boyles
 #' @note This function is still in development and may contain errors and change quickly.
 #' @examples
 #'
@@ -15,26 +15,58 @@
 #' @rdname download_icews
 
 #' @export
+#' @import RCurl
 #' @importFrom plyr l_ply progress_text
-download_icews <- function(destpath = "."){
-  library("RCurl")
-  ids <- c(2546408,2546409,2546410,2546411,2546412,2546413,2546414,2546867,2546868,2546869,2546870,2546871,2546872,2546873,2546874,2546875,2546876,2546878,2546879,2548735)
-  if (stringr::str_sub(destpath, -1) != "/"){
-    destpath <- paste0(destpath, "/")
+#'
+
+## Get ICEWS links
+get_icewslinks <- function(){
+  ## Load dataverse package
+  if(!'dataverse' %in% installed.packages()){
+    devtools::install_github("iqss/dataverse-client-r")
   }
-  message("Downloading and unzipping files.")
-  plyr::l_ply(ids, dw_file, destpath = destpath, .progress = "text")
+  library("dataverse")
+
+  ## Set dataverse metadata: API key linked to phoenixNet account
+  Sys.setenv("DATAVERSE_SERVER" = "dataverse.harvard.edu")
+  Sys.setenv("DATAVERSE_KEY" = "b95cd0bd-2295-4292-9402-bf52e34a95b7")
+
+  ## Get ICEWS event data information
+  icews_data <- get_dataset('doi:10.7910/DVN/28075')
+  icews_repos <- data.table(
+    label = icews_data$files$dataFile$filename
+    , id = icews_data$files$dataFile$id
+  )
+  icews_repos <- icews_repos[grep('.tab', icews_repos$label), ]
+  icews_metadata <- sapply(sapply(icews_repos$label, 'strsplit', '\\.'), '[[', 3)
+
+  baseURL <- "https://dataverse.harvard.edu/api/access/datafile/"
+  icews_repos[, url := paste0(baseURL, icews_repos$id)]
+
+  return(icews_repos)
 }
 
+
 # given a list of links, download them and write to specified directory
-dw_file <- function(link, destpath){
-  baseURL <- "https://dataverse.harvard.edu/api/access/datafile/"
-  fullURL <- paste0(baseURL, link)
-  filename <- paste0(destpath, link)
-  bin <- getBinaryURL(fullURL)
-  con <- file(filename, open = "wb")
-  writeBin(bin, con)
-  close(con)
-  unzip(filename, exdir = destpath, unzip = "internal", setTimes = FALSE)
-  unlink(filename)
+dw_icewsfile <- function(link, destpath, metadata = link_data){
+
+  filename <- paste0(destpath, '/', metadata[id %in% link, label])
+  fullURL <- metadata[id %in% link, url]
+
+  # download method
+  if (.Platform$OS.type == 'windows') {
+    download_method <- 'auto'
+  } else{
+    download_method <- 'curl'
+  }
+
+  download.file(fullURL, filename, method = download_method, quiet = T)
+  try({unzip(filename, exdir = destpath, unzip = "internal", setTimes = FALSE)}
+      , silent = T)
+
+
+  # if(substr(filename, nchar(filename)-3, nchar(filename)) == '.zip'){
+  #   unlink(temp)
+  # }
+
 }

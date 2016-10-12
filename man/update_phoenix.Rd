@@ -4,12 +4,10 @@
 \alias{update_phoenix}
 \title{Update a local directory of Phoenix dataset files with new files from the server}
 \usage{
-update_phoenix(destpath, phoenix_version = "current")
+update_phoenix(destpath)
 }
 \arguments{
 \item{destpath}{The path to download Phoenix into.}
-
-\item{phoenix_version.}{Download a specific version of Phoenix ("v0.1.0" or "current").}
 }
 \description{
 Checks the contents of a directory containing Phoenix event data files, checks whether the
@@ -21,7 +19,6 @@ This function, like Phoenix, is still in development and may contain errors and 
 }
 \examples{
 
-update_phoenix("~/OEDA/phoxy_test/", phoenix_version = "current")
 }
 \author{
 Andy Halterman

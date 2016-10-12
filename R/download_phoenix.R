@@ -19,7 +19,7 @@
 ## Function 1:
 ##    Process the start/end dates desired, and generate a list of
 ##    data links to try and download.
-get_links <- function(
+get_phoenixlinks <- function(
   start_date = as.Date('2014-06-20')
   , end_date = Sys.Date()
 ) {
@@ -45,7 +45,7 @@ get_links <- function(
 ### Function 2:
 ##    Given a single link, try to download that specific Phoenix data file.
 ##    If that day's data is not available, notify the user with an error message.
-dw_file <- function(link, destpath) {
+dw_phoenixfile <- function(link, destpath) {
   # extract filename from link
   m <- regexpr('[^/]*(?=\\.zip$)', link, perl = T)
   filename <- regmatches(link, m)
@@ -78,34 +78,4 @@ dw_file <- function(link, destpath) {
 
   options(warn = 1)
   unlink(temp)
-}
-
-
-###' Function 3:
-#'    A 'wrapper' function that calls the previous two functions. This automates
-#'    the generation and processing of individual "download" jobs, automatically
-#'    attempting to download an entire set of Phoenix daily data files given
-#'    the desired date range.
-#' @export
-#' @importFrom plyr l_ply progress_text
-#'
-download_phoenix <- function(
-  destpath = paste0(getwd(), '/phoenix')
-) {
-
-  ## Create links via function 1
-  links <- get_links(
-    start_date = start_date
-    , end_date = end_date
-  )
-
-  message(paste0("Downloading and unzipping files to ", destpath, '/'))
-
-  ## Download links via function 2
-  plyr::l_ply(
-    links
-    , dw_file
-    , destpath = destpath
-    , .progress = plyr::progress_text(char = '=')
-  )
 }
