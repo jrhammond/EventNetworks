@@ -17,22 +17,18 @@
 #' @export
 #' @import RCurl
 #' @importFrom plyr l_ply progress_text
+#' @import dataverse
 #'
 
 ## Get ICEWS links
-get_icewslinks <- function(){
-  ## Load dataverse package
-  if(!'dataverse' %in% installed.packages()){
-    devtools::install_github("iqss/dataverse-client-r")
-  }
-  library("dataverse")
+get_icewslinks <- function(dv_server, dv_key){
 
   ## Set dataverse metadata: API key linked to phoenixNet account
-  Sys.setenv("DATAVERSE_SERVER" = "dataverse.harvard.edu")
-  Sys.setenv("DATAVERSE_KEY" = "b95cd0bd-2295-4292-9402-bf52e34a95b7")
+  #Sys.setenv("DATAVERSE_SERVER" = "dataverse.harvard.edu")
+  #Sys.setenv("DATAVERSE_KEY" = "b95cd0bd-2295-4292-9402-bf52e34a95b7") this is mine don't use it :[
 
   ## Get ICEWS event data information
-  icews_data <- get_dataset('doi:10.7910/DVN/28075')
+  icews_data <- dataverse::get_dataset('doi:10.7910/DVN/28075')
   icews_repos <- data.table(
     label = icews_data$files$dataFile$filename
     , id = icews_data$files$dataFile$id

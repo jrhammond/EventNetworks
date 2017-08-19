@@ -10,11 +10,19 @@
 #'          June 1, 2014 as 20140601).
 #' @param end_date end date of time period as Ymd-format integer (ex:
 #'          June 1, 2014 as 20140601).
-#' @param level level of event granularity ('eventcode', 'rootcode', or
-#'           'pentaclass). 'Eventcode' creates a network for each of the
-#'           226 sub-codes in CAMEO. 'Rootcode' creates a network for each
-#'           of the 20 event root codes in CAMEO. 'Pentaclass' creates a
-#'           network for each of the 0-4 pentaclass codes in CAMEO.
+#' @param dv_server Dataverse server address from which to download
+#'          up-to-date ICEWS data. Defaults to Harvard Dataverse at
+#'          harvard.dataverse.edu.
+#' @param dv_key Unique user key to access SWORD API and automatically find and
+#'           download up-to-date ICEWS data.
+#' @param level level of event granularity ('eventcode', 'rootcode',
+#'           'pentaclass', or 'goldstein'). 'Eventcode' creates a network for
+#'           each of the 226 sub-codes in CAMEO. 'Rootcode' creates a network
+#'           for each of the 20 event root codes in CAMEO. 'Pentaclass' creates
+#'           a network for each of the 0-4 pentaclass codes in CAMEO.
+#'           'Goldstein' creates one or two networks denoting mean Goldstein
+#'           scores, either aggregated positive+negative or separated into
+#'           two separate networks for positive and negative Goldstein scores.
 #' @param phoenix_loc folder containing Phoenix data sets as daily .csv
 #'          data tables. Automatically checks for new data sets each time
 #'          the function is run, and downloads new daily data as it becomes
@@ -47,14 +55,16 @@
 #' @param tie_type type of ties to return. Default is binarized ties where
 #'          a tie represents the presence of one OR MORE interactions in the
 #'          time period specified. Valid entries are 'binary', 'count'
-#'          (count of events), or 'pct' (percentage of total events between
-#'          the two actors). Currently only 'binary' and 'count' implemented.
+#'          (count of events), 'meangoldstein' (mean Goldstein score),
+#'          'sepgoldstein' (mean positive/negative Goldstein scores separated).
+#'          NOTE: choosing a Goldstein score as tie type negates the "level"
+#'          argument.
 #' @param sources use only Phoenix or ICEWS data in creating event networks.
 #'          Valid entries are 'phoenix', 'icews', or 'both' (default).
 #'
 #' @return master_networks a LIST object containing temporally referenced event-networks.
 #'
-#' @rdname phoenix_net
+#' @rdname eventNetworks
 #'
 #' @author Jesse Hammond
 #'
@@ -71,15 +81,22 @@
 #' @import tsna
 #' @import plyr
 #' @import lubridate
-phoenix_net <- function(start_date, end_date, level
-                        , phoenix_loc, icews_loc
+#' @import dataverse
+eventNetworks <- function(start_date
+                        , end_date
+                        , level
+                        , dv_key
+                        , phoenix_loc
+                        , icews_loc
+                        , dv_server = 'harvard.dataverse.edu'
                         , update = TRUE
                         , actorset = 'states'
                         , codeset = 'all'
                         , time_window = 'day'
                         , code_subset = 'all'
                         , tie_type = 'binary'
-                        , sources = 'both'){
+                        , sources = 'both'
+                        ){
 
   ######
   #
@@ -127,6 +144,7 @@ phoenix_net <- function(start_date, end_date, level
     secondary_actors <- c('GOV', 'MIL', 'REB', 'OPP', 'PTY', 'COP', 'JUD'
                           , 'SPY', 'MED', 'EDU', 'BUS', 'CRM', 'CVL')
     statelist <- countrycode::countrycode_data$iso3c
+    statelist <- statelist[!is.na(statelist)]
     actors <- unique(statelist[statelist %in% actorset])
     actors <- actors[!is.na(actors)]
     actors <- unique(as.vector(outer(actors, secondary_actors, paste, sep = '')))
@@ -162,6 +180,12 @@ phoenix_net <- function(start_date, end_date, level
   } else if(level == 'pentaclass'){
     codes <- factor(0:4)
     levels(codes) <- as.character(0:4)
+  } else if(level == 'goldstein'){
+    if(tie_type == 'netgoldstein'){
+      codes <- 1
+    } else if(tie_type == 'sepgoldstein'){
+      codes = c('mean_neg_goldstein', 'mean_pos_goldstein')
+    }
   }
 
   ## Subset of event codes
@@ -183,7 +207,12 @@ phoenix_net <- function(start_date, end_date, level
 
   # Storage for daily network objects
   master_networks <- vector('list', length(codes))
-  names(master_networks) <- paste0('code', codes)
+  if(level != 'goldstein'){
+    names(master_networks) <- paste0('code', codes)
+  } else{
+    names(master_networks) <- codes
+  }
+
 
   # Storage for comparison of Phoenix and ICEWS reporting overlap
   filler <- rep(NA, length(dates))
@@ -204,9 +233,9 @@ phoenix_net <- function(start_date, end_date, level
 
   if(update == T){
     message('Checking Phoenix data...')
-    phoenixNet::update_phoenix(destpath = phoenix_loc)
+    EventNetworks::update_phoenix(destpath = phoenix_loc)
     message('Checking ICEWS data...')
-    phoenixNet::update_icews(destpath = icews_loc)
+    EventNetworks::update_icews(destpath = icews_loc)
   }
 
   ######
@@ -215,7 +244,7 @@ phoenix_net <- function(start_date, end_date, level
   #
   ######
 
-  if (sources %in% c('icews', 'both')){
+  if (sources %in% c('ICEWS', 'both')){
     ## Check to see if ICEWS folder exists and that it has at least one 'valid'
     ##  ICEWS data table stored.
     years <- format(unique(lubridate::floor_date(dates, 'year')), '%Y')
@@ -271,16 +300,17 @@ phoenix_net <- function(start_date, end_date, level
   ## Only parse Phoenix data if desired
 
   if (sources == 'ICEWS'){
-    phoenix_data <- data.table(date = as.Date(character())
-                               , sourceactorentity = character()
-                               , targetactorentity = character()
-                               , rootcode = numeric()
-                               , eventcode = integer()
-                               , goldstein = numeric()
-                               , 'source' = character())
+    # phoenix_data <- data.table(date = as.Date(character())
+    #                            , sourceactorentity = character()
+    #                            , targetactorentity = character()
+    #                            , rootcode = numeric()
+    #                            , eventcode = integer()
+    #                            , goldstein = numeric()
+    #                            , 'source' = character())
     message('Only using ICEWS data.')
 
-    master_data <- icews_data
+    #master_data <- icews_data
+    master_data <- copy(icews_data)
     setnames(master_data, c('sourceactorentity', 'targetactorentity')
              , c('actora', 'actorb'))
 
@@ -301,7 +331,8 @@ phoenix_net <- function(start_date, end_date, level
       setnames(master_data, c('sourceactorentity', 'targetactorentity')
                , c('actora', 'actorb'))
 
-    } else {
+    }
+    else {
 
       ## Read and parse Phoenix data
       message('Ingesting Phoenix data...')
@@ -342,8 +373,6 @@ phoenix_net <- function(start_date, end_date, level
 
   }
 
-
-
   ## Subset events: if a subset of EVENTCODES are specified, keep only that
   ##  set of events and aggregate up from there.
   if(!any('all' %in% code_subset)){
@@ -369,31 +398,28 @@ phoenix_net <- function(start_date, end_date, level
               , actorb := paste0(actorb, 'GOV')]
 
   ######
-  #
-  # Pre-format data by de-duplicating, cleaning dates and actors,
-  # and dropping unused columns
-  #
-  ######
-
   ## Subset events and columns: only events that:
   ##  1. involve specified actor set on both side (as ENTITIES)
   ##  2. involve TWO DIFFERENT actors (i.e. no self-interactions
   ##      as specified by user)
+  ######
   if(('states' %in% actorset)){
-    master_data <- master_data[(actora %in% paste0(actors, 'GOV')
-                                  & actorb %in% paste0(actors, 'GOV'))
-                               | (actora %in% paste0(actors, 'MIL')
-                                  & actorb %in% paste0(actors, 'MIL'))]
-    master_data <- master_data[substr(actora, 1, 3) != substr(actorb, 1, 3)]
-    ## Set actor codes to state-level factors
-    master_data[, actora := factor(substr(actora, 1, 3), levels = levels(actors))]
-    master_data[, actorb := factor(substr(actorb, 1, 3), levels = levels(actors))]
+    master_data <- master_data[
+      actora %in% statelist & substr(actora, 4, 6) %in% c('GOV', 'MIL', '')
+      & actorb %in% statelist & substr(actorb, 4, 6) %in% c('GOV', 'MIL', '')
+      & actora != actorb
+      ]
+    master_data[, actora := factor(actora, levels = statelist)]
+    master_data[, actorb := factor(actorb, levels = statelist)]
+
   } else{
+    master_data[, actora := substr(actora, 1, 6)]
+    master_data[, actorb := substr(actorb, 1, 6)]
     master_data <- master_data[(actora %in% actors
-                                & actorb %in% actors)]
-    master_data <- master_data[actora != actorb]
-    master_data[, actora := factor(actora, levels = levels(actors))]
-    master_data[, actorb := factor(actorb, levels = levels(actors))]
+                              & actorb %in% actors
+                              & actora != actorb)]
+    master_data[, actora := factor(actora, levels = actors)]
+    master_data[, actorb := factor(actorb, levels = actors)]
   }
 
   ## Subset columns: drop unused event column
@@ -416,54 +442,24 @@ phoenix_net <- function(start_date, end_date, level
     setcolorder(master_data, c(1,2,3,5,4))
   }
 
+
+  ######
+  #
+  # Format data by de-duplicating, separating by date,
+  # and dropping unused columns
+  #
+  ######
+
   ## Set names to generic
   setnames(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
 
-  ## Set CAMEO coded event/root codes to factors
-  master_data[, code := factor(code, levels = codes)]
+  ## Set CAMEO coded event/root/pentaclass codes to factors
+  if(!level == 'goldstein'){
+    master_data[, code := factor(code, levels = codes)]
+  }
 
   ## Set keys
   setkeyv(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
-
-
-  ######
-  #
-  # Export : how much overlap between Phoenix and ICEWS reporting?
-  #
-  ######
-
-  ## Create some temporary flag variables
-  master_data[, dup_fromtop := duplicated(
-    master_data[, list(date, actora, actorb, code)])]
-  master_data[, dup_frombot := duplicated(
-    master_data[, list(date, actora, actorb, code)], fromLast = T)]
-
-  ## Export data on reporting overlap
-  # Phoenix reporting only
-  dates_tab <- data.table(date = dates)
-  phoenix_only <- master_data[, sum(dup_fromtop == F
-                                    & source == 'phoenix'), by = date]
-  phoenix_only <- merge(dates_tab, phoenix_only, by = 'date', all.x = T)
-  phoenix_only[is.na(V1), V1 := 0]
-  sources_overlap$phoenix_only <- phoenix_only$V1
-
-  # ICEWS reporting only
-  icews_only <- master_data[, sum(dup_frombot == F
-                                  & source == 'icews'), by = date]
-  icews_only <- merge(dates_tab, icews_only, by = 'date', all.x = T)
-  icews_only[is.na(V1), V1 := 0]
-  sources_overlap$icews_only <- icews_only$V1
-
-  # Both sources report
-  both_sources <- master_data[, sum(dup_fromtop == T), by = date]
-  both_sources <- merge(dates_tab, both_sources, by = 'date', all.x = T)
-  both_sources[is.na(V1), V1 := 0]
-  sources_overlap$both_sources <- both_sources$V1
-
-  ## Drop flags and source variable
-  master_data[, dup_fromtop := NULL]
-  master_data[, dup_frombot := NULL]
-  master_data[, source := NULL]
 
   ## Drop duplicated variables
   master_data <- unique(master_data)
@@ -481,6 +477,20 @@ phoenix_net <- function(start_date, end_date, level
   } else if(tie_type == 'count'){
     ## Subset events: drop duplicated events/days/actors
     master_data <- master_data[, .N, by = list(date, actora, actorb, code)]
+  } else if(tie_type == 'meangoldstein'){
+    master_data <- master_data[, mean_goldstein := mean(code), by = list(date, actora, actorb)]
+  } else if(tie_type == 'sepgoldstein'){
+    master_data[, pos_goldstein := NA_real_]
+    master_data[code > 0, pos_goldstein := code]
+    master_data[, neg_goldstein := NA_real_]
+    master_data[code < 0, neg_goldstein := code]
+    master_data[, mean_pos_goldstein := mean(pos_goldstein, na.rm = T), by = list(date, actora, actorb)]
+    master_data[is.na(mean_pos_goldstein), mean_pos_goldstein := 0]
+    master_data[, mean_neg_goldstein := mean(neg_goldstein, na.rm = T), by = list(date, actora, actorb)]
+    master_data[is.na(mean_neg_goldstein), mean_neg_goldstein := 0]
+    master_data <- master_data[mean_pos_goldstein != 0 | mean_neg_goldstein != 0, ]
+    master_data <- unique(master_data, by = c('date', 'actora', 'actorb'))
+    master_data[, code := as.integer(mean_pos_goldstein > 0) + 1]
   }
 
   ## Format for networkDynamic creation
@@ -505,8 +515,11 @@ phoenix_net <- function(start_date, end_date, level
       event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb)]
     } else if(tie_type == 'count'){
       event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb, N)]
+    } else if(tie_type == 'meangoldstein'){
+      event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb, mean_goldstein)]
+    } else if(tie_type == 'sepgoldstein'){
+      event_data <- master_data[get(this_code) != 0, list(date, end_date, actora, actorb, get(this_code))]
     }
-
 
     if(nrow(event_data) > 0){
       # event_data[, date := as.integer(format(date, '%Y%m%d'))]
@@ -523,10 +536,10 @@ phoenix_net <- function(start_date, end_date, level
                          , mode = 'discrete', time.increment = 1
                          , time.unit = 'step')
       if(tie_type == 'binary'){
-      temporal_codenet <- networkDynamic(base.net = event_net
-                                         , edge.spells = event_data
-                                         , net.obs.period = net_period
-                                         , verbose = F)
+        temporal_codenet <- networkDynamic(base.net = event_net
+                                           , edge.spells = event_data
+                                           , net.obs.period = net_period
+                                           , verbose = F)
       } else if(tie_type == 'count'){
         temporal_codenet <- networkDynamic(base.net = event_net
                                            , edge.spells = event_data
@@ -534,25 +547,22 @@ phoenix_net <- function(start_date, end_date, level
                                            , create.TEAs = T
                                            , edge.TEA.names = 'N'
                                            , verbose = F)
-      }
-
-      ## Store list in master network list
-      master_networks[paste0('code', this_code)] <- list(temporal_codenet)
-    } else {
-      ## Generate networkDynamic object
-      net_period <- list(observations = list(c(min(dates), max(dates)))
-                         , mode = 'discrete', time.increment = 1
-                         , time.unit = 'step')
-      temporal_codenet <- network.initialize(n = n, directed = T, loops = F)
-      network.vertex.names(temporal_codenet) <- levels(actors)
-      activate.vertices(temporal_codenet, onset = min(dates), terminus = max(dates))
-      set.network.attribute(temporal_codenet, 'net.obs.period', net_period)
+      } else {
+        temporal_codenet <- networkDynamic(base.net = event_net
+                                           , edge.spells = event_data
+                                           , net.obs.period = net_period
+                                           , create.TEAs = T
+                                           , edge.TEA.names = this_code
+                                           , verbose = F)
     }
-
     ## Store list in master network list
-    master_networks[paste0('code', this_code)] <- list(temporal_codenet)
-
+    if(level != 'goldstein'){
+      master_networks[paste0('code', this_code)] <- list(temporal_codenet)
+      } else{
+      master_networks[this_code] <- list(temporal_codenet)
+      }
+    }
   }
-
-  return(list(diagnostics = sources_overlap, dailynets = master_networks))
+  return(master_networks)
 }
+

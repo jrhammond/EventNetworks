@@ -1,9 +1,9 @@
-Package: phoenixNet
-Title: Gather, munge, and convert Phoenix event data into daily event-networks.
+Package: EventNetworks
+Title: Gather, munge, and convert event data into daily event-networks.
 Version: 0.0.0.9000
 Author: person("Jesse", "Hammond", email = "jesse.hammond1@gmail.com", role =
     c("aut", "cre"))
-Description: This package downloads daily Phoenix event data (time range set
+Description: This package downloads daily event data (time range set
     by user) into a set of temp files. Event data are merged and de-duplicated,
     then turned into daily network objects by event-code or event-root-code. The
     resulting set of networks is saved as a (very) large list object, organized by
