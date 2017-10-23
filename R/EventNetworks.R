@@ -51,7 +51,7 @@
 #'          event codes below 100, but then aggregate those event codes to
 #'          rootcode or pentaclass.
 #' @param time_window temporal window to build event-networks. Valid
-#'          entries are 'day', 'week', 'month', or 'year'.
+#'          entries are 'day', 'week', 'month', 'quarter', or 'year'.
 #' @param tie_type type of ties to return. Default is binarized ties where
 #'          a tie represents the presence of one OR MORE interactions in the
 #'          time period specified. Valid entries are 'binary', 'count'
@@ -136,6 +136,7 @@ eventNetworks <- function(start_date
     # Set up set of primary actor codes
     statelist <- unique(countrycode::countrycode_data$iso3c)
     statelist <- statelist[!is.na(statelist)]
+    statelist <- c(statelist, 'KSV', 'IGO')
     actors <- as.factor(sort(statelist))
     n <- length(actors)
 
@@ -405,12 +406,18 @@ eventNetworks <- function(start_date
   ######
   if(('states' %in% actorset)){
     master_data <- master_data[
-      actora %in% statelist & substr(actora, 4, 6) %in% c('GOV', 'MIL', '')
-      & actorb %in% statelist & substr(actorb, 4, 6) %in% c('GOV', 'MIL', '')
-      & actora != actorb
+      substr(actora, 1, 3) %in% actors & substr(actora, 4, 6) %in% c('GOV', 'MIL', '')
+      & substr(actorb, 1, 3) %in% actors & substr(actorb, 4, 6) %in% c('GOV', 'MIL', '')
       ]
-    master_data[, actora := factor(actora, levels = statelist)]
-    master_data[, actorb := factor(actorb, levels = statelist)]
+    master_data[substr(actora, 1, 6) %in% 'IGOEUR', actora := 'EUR']
+    master_data[substr(actorb, 1, 6) %in% 'IGOEUR', actorb := 'EUR']
+    master_data[substr(actora, 1, 6) %in% 'IGOUNO', actora := 'UNO']
+    master_data[substr(actorb, 1, 6) %in% 'IGOUNO', actorb := 'UNO']
+    master_data[, actora := substr(actora, 1, 3)]
+    master_data[, actorb := substr(actorb, 1, 3)]
+    master_data[, actora := factor(actora, levels = levels(actors))]
+    master_data[, actorb := factor(actorb, levels = levels(actors))]
+    master_data <- master_data[actora != actorb]
 
   } else{
     master_data[, actora := substr(actora, 1, 6)]
@@ -454,9 +461,9 @@ eventNetworks <- function(start_date
   setnames(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
 
   ## Set CAMEO coded event/root/pentaclass codes to factors
-  if(!level == 'goldstein'){
-    master_data[, code := factor(code, levels = codes)]
-  }
+  # if(!level == 'goldstein'){
+  #   master_data[, code := factor(code, levels = codes)]
+  # }
 
   ## Set keys
   setkeyv(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
@@ -506,7 +513,25 @@ eventNetworks <- function(start_date
   #
   ######
 
-  dates <- c(dates, (max(dates) + 1))
+
+  if(time_window == 'day'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) + lubridate::days(1)
+  } else if(time_window == 'week'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) + lubridate::weeks(1)
+  } else if(time_window == 'month'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) %m+% months(1)
+  } else if(time_window == 'quarter'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) %m+% months(1)
+  } else if(time_window == 'year'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) + lubridate::years(1)
+  }
+
+  # dates <- c(dates, (max(dates) + 1))
   dates <- as.integer(format(dates, '%Y%m%d'))
   for(this_code in codes){
 
