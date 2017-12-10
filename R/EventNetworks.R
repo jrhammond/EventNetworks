@@ -21,7 +21,7 @@
 #'           for each of the 20 event root codes in CAMEO. 'Pentaclass' creates
 #'           a network for each of the 0-4 pentaclass codes in CAMEO.
 #'           'Goldstein' creates one or two networks denoting mean Goldstein
-#'           scores, either aggregated positive+negative or separated into
+#'           scores, either aggregated (positive - negative) or separated into
 #'           two separate networks for positive and negative Goldstein scores.
 #' @param phoenix_loc folder containing Phoenix data sets as daily .csv
 #'          data tables. Automatically checks for new data sets each time
@@ -31,6 +31,11 @@
 #' @param icews_loc folder containing ICEWS data sets as daily .tab data
 #'          tables. Because I don't know how to work a SWORD API, these will
 #'          need to be manually downloaded and updated.
+#' @param histphoenix_loc folder containing historic Phoenix data from
+#'          UIUC's Cline Center for Democracy. Leave empty if you don't
+#'          want to use these data.
+#' @param dv_server location of the ICEWS Dataverse server. Defaults to
+#'          "harvard.dataverse.edu" and probably won't change anytime soon.
 #' @param update should phoenixNet attempt to download new data? This will attempt
 #'          to download any Phoenix data files that 'should' be present in the
 #'          Phoenix data directory (one data file per day, from 2014-06-20 through
@@ -39,13 +44,14 @@
 #' @param actorset set of actors for which to create event-networks. Defaults
 #'          to the 255 ISO-coded states in the international system. Specifying
 #'          a specific state or set of states (as 3-character ISO codes) will
-#'          extract all the 'major' actors withint that state/states.
+#'          extract all the 'major' domestic entites within that state/states.
 #' @param codeset subset of event codes as specified by 'level'. This is useful
 #'          if you desire to extract only a portion of interactions recorded
 #'          by CAMEO, but has to align with the code aggregation specified
 #'          in the 'level' argument. For example, if you specify 'rootcode',
 #'          the 'codeset' you specify has to be one or more root codes between
-#'          1 and 20. Defaults to 'all'.
+#'          1 and 20. Entering a subset of root code values would return a
+#'          smaller number of network layers. Defaults to 'all'.
 #' @param code_subset subset of EVENTCODES that can be aggregated up to higher
 #'          order interactions. For example, you might want to only look at
 #'          event codes below 100, but then aggregate those event codes to
@@ -60,7 +66,7 @@
 #'          NOTE: choosing a Goldstein score as tie type negates the "level"
 #'          argument.
 #' @param sources use only Phoenix or ICEWS data in creating event networks.
-#'          Valid entries are 'phoenix', 'icews', or 'both' (default).
+#'          Valid entries are 'phoenix', 'icews', 'histphoenix' or 'all' (default).
 #'
 #' @return master_networks a LIST object containing temporally referenced event-networks.
 #'
@@ -82,12 +88,14 @@
 #' @import plyr
 #' @import lubridate
 #' @import dataverse
+#' @import bit64
 eventNetworks <- function(start_date
                         , end_date
                         , level
                         , dv_key
-                        , phoenix_loc
-                        , icews_loc
+                        , phoenix_loc = NULL
+                        , icews_loc = NULL
+                        , histphoenix_loc = NULL
                         , dv_server = 'harvard.dataverse.edu'
                         , update = TRUE
                         , actorset = 'states'
@@ -95,7 +103,7 @@ eventNetworks <- function(start_date
                         , time_window = 'day'
                         , code_subset = 'all'
                         , tie_type = 'binary'
-                        , sources = 'both'
+                        , sources = 'all'
                         ){
 
   ######
@@ -191,13 +199,15 @@ eventNetworks <- function(start_date
   ## Subset of event codes
   if(!any('all' %in% codeset)){
     if(sum(!codeset %in% codes) > 0){
-      message('Warning: some event codes do not match specified event class. Proceeding with valid event codes.')
+      message('Warning: some event codes do not match specified event class.
+              Proceeding with valid event codes.')
     }
     codes <- codes[codes %in% codeset]
     if(length(codes) == 0){
       stop('Please enter a valid set of event codes or pentaclass values.')
     }
   }
+
 
   ######
   #
@@ -213,13 +223,6 @@ eventNetworks <- function(start_date
     names(master_networks) <- codes
   }
 
-
-  # Storage for comparison of Phoenix and ICEWS reporting overlap
-  filler <- rep(NA, length(dates))
-  sources_overlap <- data.table(date = dates
-                                , phoenix_only = filler
-                                , icews_only = filler
-                                , both_sources = filler)
 
   ######
   #
@@ -238,101 +241,87 @@ eventNetworks <- function(start_date
     EventNetworks::update_icews(destpath = icews_loc)
   }
 
+
   ######
   #
   # Read and parse ICEWS data for merging.
   #
   ######
 
-  if (sources %in% c('ICEWS', 'both')){
-    ## Check to see if ICEWS folder exists and that it has at least one 'valid'
-    ##  ICEWS data table stored.
-    years <- format(unique(lubridate::floor_date(dates, 'year')), '%Y')
-    message('Checking ICEWS data...')
-    icews_files <- list.files(icews_loc)
-    icews_years <- ldply(strsplit(icews_files, '\\.'))$V2
-    access_years <- which(icews_years %in% years)
+  icews_data <- data.table(date = as.Date(character())
+                           , actora = character()
+                           , actorb = character()
+                           , rootcode = numeric()
+                           , eventcode = integer()
+                           , goldstein = numeric())
 
-    if(length(access_years) == 0){
-      message('No ICEWS files found in the specified timespan.')
+  if (sources %in% c('ICEWS', 'all')){
+
+    if(end_date < as.Date('1995-01-01')){
+      ## Only parse ICEWS data if it exists in that date range
       icews_data <- data.table(date = as.Date(character())
-                               , sourceactorentity = character()
-                               , targetactorentity = character()
-                               , rootcode = numeric()
-                               , eventcode = integer()
-                               , goldstein = numeric()
-                               , 'source' = character())
-    } else{
+                                 , actora = character()
+                                 , actorb = character()
+                                 , rootcode = numeric()
+                                 , eventcode = integer()
+                                 , goldstein = numeric())
+      message('Specified timespan ends before ICEWS data coverage begins.')
 
-      ## Read and parse ICEWS data
-      message('Ingesting ICEWS data...')
-      icews_data <- ingest_icews(icews_loc, start_date, end_date)
+    } else {
+      ## Check to see if ICEWS folder exists and that it has at least one 'valid'
+      ##  ICEWS data table stored.
+      years <- format(unique(lubridate::floor_date(dates, 'year')), '%Y')
+      message('Checking ICEWS data...')
+      icews_files <- list.files(icews_loc)
+      icews_years <- ldply(strsplit(icews_files, '\\.'))$V2
+      access_years <- which(icews_years %in% years)
 
-      ## Clean ICEWS data and format to Phoenix-style CAMEO codes
-      ##  for actors and states
-      message('Munging ICEWS data...')
-      icews_data <- icews_cameo(icews_data)
+      if(length(access_years) == 0){
+        message('No ICEWS files found in the specified timespan.')
+      } else {
 
-      ## Subset ICEWS data to only keep key columns
-      icews_data <- icews_data[, list(date, sourceactorentity
-                                      , targetactorentity, rootcode
-                                      , eventcode, goldstein)]
-      icews_data[, source := 'icews']
+        ## Read and parse ICEWS data
+        message('Ingesting ICEWS data...')
+        icews_data <- ingest_icews(icews_loc, start_date, end_date)
 
+        ## Clean ICEWS data and format to Phoenix-style CAMEO codes
+        ##  for actors and states
+        message('Munging ICEWS data...')
+        icews_data <- icews_cameo(icews_data)
+
+        ## Subset ICEWS data to only keep key columns
+        icews_data <- icews_data[, list(date, sourceactorentity
+                                        , targetactorentity, rootcode
+                                        , eventcode, goldstein)]
+        setnames(icews_data, c('sourceactorentity', 'targetactorentity')
+                 , c('actora', 'actorb'))
+      }
     }
   } else {
-    icews_data <- data.table(date = as.Date(character())
-                             , sourceactorentity = character()
-                             , targetactorentity = character()
-                             , rootcode = numeric()
-                             , eventcode = integer()
-                             , goldstein = numeric()
-                             , 'source' = character())
+
   }
 
 
   ######
   #
-  # Read and parse Phoenix data for merging.
+  # Read and parse live Phoenix data for merging.
   #
   ######
 
-  ## Only parse Phoenix data if desired
+  phoenix_data <- data.table(date = as.Date(character())
+                           , actora = character()
+                           , actorb = character()
+                           , rootcode = numeric()
+                           , eventcode = integer()
+                           , goldstein = numeric())
 
-  if (sources == 'ICEWS'){
-    # phoenix_data <- data.table(date = as.Date(character())
-    #                            , sourceactorentity = character()
-    #                            , targetactorentity = character()
-    #                            , rootcode = numeric()
-    #                            , eventcode = integer()
-    #                            , goldstein = numeric()
-    #                            , 'source' = character())
-    message('Only using ICEWS data.')
-
-    #master_data <- icews_data
-    master_data <- copy(icews_data)
-    setnames(master_data, c('sourceactorentity', 'targetactorentity')
-             , c('actora', 'actorb'))
-
-  } else {
+  if (sources %in% c('phoenix', 'all')){
 
     if(end_date < as.Date('2014-06-20')){
       ## Only parse Phoenix data if it exists in that date range
-      phoenix_data <- data.table(date = as.Date(character())
-                                 , sourceactorentity = character()
-                                 , targetactorentity = character()
-                                 , rootcode = numeric()
-                                 , eventcode = integer()
-                                 , goldstein = numeric()
-                                 , 'source' = character())
-      message('Specified timespan ends before Phoenix data coverage begins.')
+      message('Specified timespan ends before live Phoenix data coverage begins.')
 
-      master_data <- icews_data
-      setnames(master_data, c('sourceactorentity', 'targetactorentity')
-               , c('actora', 'actorb'))
-
-    }
-    else {
+    } else {
 
       ## Read and parse Phoenix data
       message('Ingesting Phoenix data...')
@@ -347,30 +336,62 @@ eventNetworks <- function(start_date
                                                    , targetactorrole, sep = '')
                                           , rootcode, eventcode, goldstein)]
       setnames(phoenix_data, c('V2', 'V3')
-               , c('sourceactorentity', 'targetactorentity'))
-      phoenix_data[, source := 'phoenix']
+               , c('actora', 'actorb'))
 
       ## Drop any missing data
       phoenix_data <- phoenix_data[!is.na(rootcode)]
       phoenix_data <- phoenix_data[!is.na(eventcode)]
       phoenix_data <- phoenix_data[!is.na(goldstein)]
-
-
-      ######
-      #
-      # Combine ICEWS and Phoenix data
-      #
-      ######
-
-      master_data <- rbind(icews_data, phoenix_data)
-      if(nrow(master_data) == 0){
-        stop('No Phoenix or ICEWS data available for the specified timespan.')
-      }
-      setnames(master_data, c('sourceactorentity', 'targetactorentity')
-               , c('actora', 'actorb'))
-
     }
+  }
 
+  ######
+  #
+  # Read and parse historic Phoenix data for merging.
+  #
+  ######
+
+  histphoenix_data <- data.table(date = as.Date(character())
+                           , actora = character()
+                           , actorb = character()
+                           , rootcode = numeric()
+                           , eventcode = integer()
+                           , goldstein = numeric())
+
+  if (sources %in% c('histphoenix', 'all')){
+
+    if(end_date < as.Date('1945-01-01')){
+      ## Only parse Phoenix data if it exists in that date range
+      message('Specified timespan ends before historic Phoenix data coverage begins.')
+
+    } else {
+
+      ## Read and parse Phoenix data
+      message('Ingesting historic Phoenix data...')
+
+      ## Read in and pre-parse historic Phoenix data
+      histphoenix_data <- ingest_histphoenix(histphoenix_loc)
+
+      ## Subset historic Phoenix data to only keep key columns
+      histphoenix_data <- histphoenix_data[, list(date, source, target
+                                          , root_code, code, goldstein)]
+      setnames(
+        histphoenix_data
+        , c('date', 'actora', 'actorb', 'rootcode', 'eventcode', 'goldstein')
+      )
+    }
+  }
+
+
+  ######
+  #
+  # Combine data sets
+  #
+  ######
+
+  master_data <- rbind(icews_data, phoenix_data, histphoenix_data)
+  if(nrow(master_data) == 0){
+    stop('No Phoenix or ICEWS data available for the specified timespan.')
   }
 
   ## Subset events: if a subset of EVENTCODES are specified, keep only that
@@ -386,6 +407,7 @@ eventNetworks <- function(start_date
   master_data[rootcode %in% c(9, 10, 11, 12, 13, 16), pentaclass := 3L]
   master_data[rootcode %in% c(14, 15, 17, 18, 19, 20), pentaclass := 4L]
 
+
   ######################################
   ## IMPORTANT ASSUMPTION HERE:
   ## I am *ASSUMING* that NULL/NA entries after a state code
@@ -397,6 +419,7 @@ eventNetworks <- function(start_date
   master_data[actorb %in%  countrycode::countrycode_data$iso3c
               , actorb := paste0(actorb, 'GOV')]
 
+
   ######
   ## Subset events and columns: only events that:
   ##  1. involve specified actor set on both side (as ENTITIES)
@@ -405,10 +428,12 @@ eventNetworks <- function(start_date
   ######
   if(('states' %in% actorset)){
     master_data <- master_data[
-      actora %in% statelist & substr(actora, 4, 6) %in% c('GOV', 'MIL', '')
-      & actorb %in% statelist & substr(actorb, 4, 6) %in% c('GOV', 'MIL', '')
+      substr(actora, 1, 3) %in% statelist & substr(actora, 4, 6) %in% c('GOV', 'MIL', '')
+      & substr(actorb, 1, 3) %in% statelist & substr(actorb, 4, 6) %in% c('GOV', 'MIL', '')
       & actora != actorb
       ]
+    master_data[, actora := substr(actora, 1, 3)]
+    master_data[, actorb := substr(actorb, 1, 3)]
     master_data[, actora := factor(actora, levels = statelist)]
     master_data[, actorb := factor(actorb, levels = statelist)]
 
@@ -421,6 +446,17 @@ eventNetworks <- function(start_date
     master_data[, actora := factor(actora, levels = actors)]
     master_data[, actorb := factor(actorb, levels = actors)]
   }
+
+
+  ######
+  #
+  # Format data by de-duplicating, separating by date,
+  # and dropping unused columns
+  #
+  ######
+
+  ## Drop duplicated variables
+  master_data <- unique(master_data)
 
   ## Subset columns: drop unused event column
   if(level == 'rootcode'){
@@ -439,19 +475,11 @@ eventNetworks <- function(start_date
     master_data[, eventcode := NULL]
     master_data[, rootcode := NULL]
     master_data[, goldstein := NULL]
-    setcolorder(master_data, c(1,2,3,5,4))
   }
 
 
-  ######
-  #
-  # Format data by de-duplicating, separating by date,
-  # and dropping unused columns
-  #
-  ######
-
   ## Set names to generic
-  setnames(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
+  setnames(master_data, c('date', 'actora', 'actorb', 'code'))
 
   ## Set CAMEO coded event/root/pentaclass codes to factors
   if(!level == 'goldstein'){
@@ -459,10 +487,8 @@ eventNetworks <- function(start_date
   }
 
   ## Set keys
-  setkeyv(master_data, c('date', 'actora', 'actorb', 'code', 'source'))
+  setkeyv(master_data, c('date', 'actora', 'actorb', 'code'))
 
-  ## Drop duplicated variables
-  master_data <- unique(master_data)
 
   ## Aggregate dates to specified time window
   master_data[, date := lubridate::floor_date(date, time_window)]
@@ -473,7 +499,7 @@ eventNetworks <- function(start_date
   ## Subset events
   if(tie_type == 'binary'){
     ## Subset events: drop duplicated events/days/actors
-    master_data <- master_data[!duplicated(master_data)]
+    master_data <- unique(master_data)
   } else if(tie_type == 'count'){
     ## Subset events: drop duplicated events/days/actors
     master_data <- master_data[, .N, by = list(date, actora, actorb, code)]

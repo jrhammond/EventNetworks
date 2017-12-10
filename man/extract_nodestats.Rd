@@ -21,4 +21,3 @@ INTERNAL FUNCTION: Intakes a given network object and returns a set
 \keyword{data}
 \keyword{event}
 \keyword{phoenix,}
-

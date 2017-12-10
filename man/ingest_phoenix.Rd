@@ -31,4 +31,3 @@ events <- ingest_phoenix("~/OEDA/phoxy_test/", 20140620, 20150101)
 \author{
 Andy Halterman, forked by Jesse Hammond
 }
-

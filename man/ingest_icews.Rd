@@ -31,4 +31,3 @@ events <- ingest_icews("~/ICEWS/study_28075/Data/", 20101201, 20140101)
 \author{
 Andy Halterman, forked by Jesse Hammond
 }
-

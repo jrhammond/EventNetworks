@@ -20,7 +20,3 @@ This function, like Phoenix, is still in development and may contain errors and 
 \examples{
 
 }
-\author{
-Andy Halterman
-}
-

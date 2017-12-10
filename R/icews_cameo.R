@@ -49,14 +49,10 @@ icews_cameo <- function(icews){
 
   ## Conversion function: intake list of sectors, return the CAMEO actor
   ##  code for the 'most important' actor in the list
-  cameo_convert <- function(sector){
-    this_source <- data.table(actor = unlist(strsplit(sector, ',')))
-    this_codes <- merge(agents, this_source, sort = F, by = 'actor')
-    if(any(sapply(this_codes[, code1], 'substr', 1, 3) %in% agentcodes)){
-      return(agentcodes[min(which(agentcodes %in% this_codes[,code1]))])
-    } else{
-      return(NA_character_)
-    }
+  cameo_convert <- function(in_data){
+    this_source <- data.table(actor = sapply(strsplit(in_data, ','), '[', 1))
+    this_codes <- merge(this_source, agents, sort = F, all.x = T, by = 'actor')
+    return(substr(this_codes$code1, 1, 3))
 
   }
 
@@ -83,8 +79,8 @@ icews_cameo <- function(icews){
   ######
 
   ## Convert unique source/target sector codes
-  source_table[, source_codes := ldply(source_table$Source.Sectors, cameo_convert)]
-  target_table[, target_codes := ldply(target_table$Target.Sectors, cameo_convert)]
+  source_table[, source_codes := cameo_convert(Source.Sectors)]
+  target_table[, target_codes := cameo_convert(Target.Sectors)]
   icews <- merge(icews, source_table, by = 'Source.Sectors', all.x = T, sort = F)
   icews <- merge(icews, target_table, by = 'Target.Sectors', all.x = T, sort = F)
 
