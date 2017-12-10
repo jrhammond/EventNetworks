@@ -61,6 +61,8 @@ Installation
 ------------
 `devtools::install_github("jrhammond/EventNetworks")`
 ```
+### Generate a set of temporal networks.
+
 test <- EventNetworks::eventNetworks(
 +   start_date = 20140101
 +            , end_date = 20150101
@@ -95,6 +97,9 @@ Ingesting historic Phoenix data...
 Read 817955 rows and 25 (of 25) columns from 0.096 GB file in 00:00:03
 Read 1092211 rows and 25 (of 25) columns from 0.133 GB file in 00:00:05
 Read 2906715 rows and 25 (of 25) columns from 0.373 GB file in 00:00:07
+
+## View the first temporal network layer.
+
 > test[[1]]
 NetworkDynamic properties:
   distinct change times: 13 
