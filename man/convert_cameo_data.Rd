@@ -22,4 +22,3 @@ Used internally by the \code{convert_cameo()} function.
 The current CAMEO codebook is located here: \url{http://eventdata.parusanalytics.com/data.dir/cameo.html}.
 }
 \keyword{datasets}
-

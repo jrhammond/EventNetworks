@@ -23,4 +23,3 @@ This function, like Phoenix, is still in development and may contain errors and 
 \author{
 Original concept and code for Phoenix: Andy Halterman
 }
-

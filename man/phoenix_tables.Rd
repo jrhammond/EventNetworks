@@ -33,4 +33,3 @@ This function is still in early development and may contain significant errors.
 \author{
 Jesse Hammond
 }
-

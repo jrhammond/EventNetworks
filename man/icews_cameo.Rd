@@ -24,4 +24,3 @@ Intake a set of ICEWS data (read in after some pre-processing)
 
 @export
 }
-

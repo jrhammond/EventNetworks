@@ -19,4 +19,3 @@ events$Description <- phoxy::convert_cameo(events$EventCode) # Vector of values 
 }
 \keyword{data}
 \keyword{event}
-

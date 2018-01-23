@@ -4,7 +4,7 @@
 \alias{get_icewslinks}
 \title{Download the ICEWS Dataset}
 \usage{
-get_icewslinks()
+get_icewslinks(dv_server, dv_key)
 }
 \arguments{
 \item{destpath}{The path to the directory where ICEWS should go.}
@@ -24,4 +24,3 @@ download_icews("~/ICEWS/")
 \author{
 Original code and concept: Tony Boyles
 }
-
