@@ -30,8 +30,8 @@ get_icewslinks <- function(dv_server, dv_key){
   ## Get ICEWS event data information
   icews_data <- dataverse::get_dataset('doi:10.7910/DVN/28075')
   icews_repos <- data.table(
-    label = icews_data$files$dataFile$filename
-    , id = icews_data$files$dataFile$id
+    label = icews_data$files$filename
+    , id = icews_data$files$id
   )
   icews_repos <- icews_repos[grep('.tab', icews_repos$label), ]
   icews_metadata <- sapply(sapply(icews_repos$label, 'strsplit', '\\.'), '[[', 3)
