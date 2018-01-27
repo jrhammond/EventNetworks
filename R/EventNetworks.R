@@ -57,7 +57,7 @@
 #'          event codes below 100, but then aggregate those event codes to
 #'          rootcode or pentaclass.
 #' @param time_window temporal window to build event-networks. Valid
-#'          entries are 'day', 'week', 'month', or 'year'.
+#'          entries are 'day', 'week', 'month', 'quarter', or 'year'.
 #' @param tie_type type of ties to return. Default is binarized ties where
 #'          a tie represents the presence of one OR MORE interactions in the
 #'          time period specified. Valid entries are 'binary', 'count'
@@ -106,6 +106,7 @@ eventNetworks <- function(start_date
                         , sources = 'all'
                         ){
 
+  library(lubridate)
   ######
   #
   # Set up some initial values: Time windows
@@ -144,7 +145,9 @@ eventNetworks <- function(start_date
     # Set up set of primary actor codes
     statelist <- unique(countrycode::countrycode_data$iso3c)
     statelist <- statelist[!is.na(statelist)]
-    actors <- as.factor(sort(statelist))
+    statelist <- c(statelist, 'KSV', 'IGO')
+    statelist <- sort(statelist)
+    actors <- as.factor(statelist)
     n <- length(actors)
 
   } else {
@@ -206,21 +209,6 @@ eventNetworks <- function(start_date
     if(length(codes) == 0){
       stop('Please enter a valid set of event codes or pentaclass values.')
     }
-  }
-
-
-  ######
-  #
-  # Set up some empty storage objects
-  #
-  ######
-
-  # Storage for daily network objects
-  master_networks <- vector('list', length(codes))
-  if(level != 'goldstein'){
-    names(master_networks) <- paste0('code', codes)
-  } else{
-    names(master_networks) <- codes
   }
 
 
@@ -370,7 +358,7 @@ eventNetworks <- function(start_date
       message('Ingesting historic Phoenix data...')
 
       ## Read in and pre-parse historic Phoenix data
-      histphoenix_data <- ingest_histphoenix(histphoenix_loc)
+      histphoenix_data <- ingest_histphoenix(histphoenix_loc, start_date, end_date, actors)
 
       ## Subset historic Phoenix data to only keep key columns
       histphoenix_data <- histphoenix_data[, list(date, source, target
@@ -428,14 +416,14 @@ eventNetworks <- function(start_date
   ######
   if(('states' %in% actorset)){
     master_data <- master_data[
-      substr(actora, 1, 3) %in% statelist & substr(actora, 4, 6) %in% c('GOV', 'MIL', '')
-      & substr(actorb, 1, 3) %in% statelist & substr(actorb, 4, 6) %in% c('GOV', 'MIL', '')
+      substr(actora, 1, 3) %in% actors & substr(actora, 4, 6) %in% c('GOV', 'MIL', '')
+      & substr(actorb, 1, 3) %in% actors & substr(actorb, 4, 6) %in% c('GOV', 'MIL', '')
       & actora != actorb
       ]
     master_data[, actora := substr(actora, 1, 3)]
     master_data[, actorb := substr(actorb, 1, 3)]
-    master_data[, actora := factor(actora, levels = statelist)]
-    master_data[, actorb := factor(actorb, levels = statelist)]
+    master_data[, actora := factor(actora, levels = levels(actors))]
+    master_data[, actorb := factor(actorb, levels = levels(actors))]
 
   } else{
     master_data[, actora := substr(actora, 1, 6)]
@@ -457,6 +445,9 @@ eventNetworks <- function(start_date
 
   ## Drop duplicated variables
   master_data <- unique(master_data)
+
+  ## Drop self-events
+  master_data <- master_data[actora != actorb]
 
   ## Subset columns: drop unused event column
   if(level == 'rootcode'){
@@ -482,9 +473,9 @@ eventNetworks <- function(start_date
   setnames(master_data, c('date', 'actora', 'actorb', 'code'))
 
   ## Set CAMEO coded event/root/pentaclass codes to factors
-  if(!level == 'goldstein'){
-    master_data[, code := factor(code, levels = codes)]
-  }
+  # if(!level == 'goldstein'){
+  #   master_data[, code := factor(code, levels = codes)]
+  # }
 
   ## Set keys
   setkeyv(master_data, c('date', 'actora', 'actorb', 'code'))
@@ -532,63 +523,144 @@ eventNetworks <- function(start_date
   #
   ######
 
-  dates <- c(dates, (max(dates) + 1))
-  dates <- as.integer(format(dates, '%Y%m%d'))
-  for(this_code in codes){
 
-    ## Subset by root/event code
+  if(time_window == 'day'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) + lubridate::days(1)
+  } else if(time_window == 'week'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) + lubridate::weeks(1)
+  } else if(time_window == 'month'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) %m+% months(1)
+  } else if(time_window == 'quarter'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) %m+% months(1)
+  } else if(time_window == 'year'){
+    dates <- c(dates, dates[length(dates)])
+    dates[length(dates)] <- lubridate::ymd(dates[length(dates)]) + lubridate::years(1)
+  }
+
+  final_dates <- as.integer(format(dates, '%Y%m%d'))
+
+
+  ######
+  ## Break out tie construction and decide on output format based on tie type.
+  #####
+
+  dated_arrays <- list()
+
+  ###### Binary or count-weighted ties
+  if(tie_type %in% c('binary', 'count')){
+
     if(tie_type == 'binary'){
-      event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb)]
-    } else if(tie_type == 'count'){
-      event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb, N)]
-    } else if(tie_type == 'meangoldstein'){
-      event_data <- master_data[code %in% this_code, list(date, end_date, actora, actorb, mean_goldstein)]
-    } else if(tie_type == 'sepgoldstein'){
-      event_data <- master_data[get(this_code) != 0, list(date, end_date, actora, actorb, get(this_code))]
+      event_data <- master_data[, list(date, end_date, actora, actorb, code)]
+      event_data[, N := 1]
+    } else {
+      event_data <- master_data[, list(date, end_date, actora, actorb, code, N)]
     }
 
-    if(nrow(event_data) > 0){
-      # event_data[, date := as.integer(format(date, '%Y%m%d'))]
-      # event_data[, end_date := as.integer(format(end_date, '%Y%m%d'))]
-      event_data[, actora := as.integer(actora)]
-      event_data[, actorb := as.integer(actorb)]
+    n_codes <- length(codes)
 
-      ## Initialize the network size and characteristics
-      event_net <- network::network.initialize(n = n, directed = T, loops = F)
-      network.vertex.names(event_net) <- levels(actors)
+    for(i in 1:length(final_dates)){
 
-      ## Generate networkDynamic object
-      net_period <- list(observations = list(c(min(dates), max(dates)))
-                         , mode = 'discrete', time.increment = 1
-                         , time.unit = 'step')
-      if(tie_type == 'binary'){
-        temporal_codenet <- networkDynamic(base.net = event_net
-                                           , edge.spells = event_data
-                                           , net.obs.period = net_period
-                                           , verbose = F)
-      } else if(tie_type == 'count'){
-        temporal_codenet <- networkDynamic(base.net = event_net
-                                           , edge.spells = event_data
-                                           , net.obs.period = net_period
-                                           , create.TEAs = T
-                                           , edge.TEA.names = 'N'
-                                           , verbose = F)
-      } else {
-        temporal_codenet <- networkDynamic(base.net = event_net
-                                           , edge.spells = event_data
-                                           , net.obs.period = net_period
-                                           , create.TEAs = T
-                                           , edge.TEA.names = this_code
-                                           , verbose = F)
-    }
-    ## Store list in master network list
-    if(level != 'goldstein'){
-      master_networks[paste0('code', this_code)] <- list(temporal_codenet)
-      } else{
-      master_networks[this_code] <- list(temporal_codenet)
+      date_array <- array(
+        0
+        , dim = c(n, n, n_codes)
+        , dimnames = list(actors, actors, unique(codes))
+      )
+      this_date <- final_dates[i]
+
+      for(j in 1:n_codes){
+        this_code <- codes[j]
+        this_events <- event_data[date %in% this_date & code %in% this_code]
+
+        if(nrow(this_events) > 0){
+          this_events <- this_events[order(actora, actorb)]
+          this_dyad_idx <- as.matrix(
+            this_events[, list(as.integer(actora), as.integer(actorb))]
+          )
+          date_array[cbind(this_dyad_idx, this_code)] <- this_events[, N]
+        }
       }
+      dated_arrays[[i]] <- date_array
     }
   }
-  return(master_networks)
+
+  ###### Mean Goldstein score ties
+  if(tie_type %in% 'meangoldstein'){
+
+    event_data <-  master_data[, list(date, end_date, actora, actorb, mean_goldstein)]
+
+    for(i in 1:length(final_dates)){
+
+      date_array <- matrix(
+        0
+        , nrow = n
+        , ncol = n
+        , dimnames = list(actors, actors)
+      )
+      this_date <- final_dates[i]
+      this_events <- event_data[date %in% this_date]
+
+      if(nrow(this_events) > 0){
+        this_events <- unique(this_events)
+        this_events <- this_events[order(actora, actorb)]
+        this_dyad_idx <- as.matrix(
+          this_events[, list(as.integer(actora), as.integer(actorb))]
+        )
+        date_array[this_dyad_idx] <- this_events[, mean_goldstein]
+      }
+
+      dated_arrays[[i]] <- date_array
+    }
+
+  }
+
+  ###### Separated pos/neg Goldstein score ties
+  if(tie_type %in% 'sepgoldstein'){
+
+
+    event_data <-  master_data[
+      , list(date, end_date, actora, actorb, mean_pos_goldstein, mean_neg_goldstein)
+      ]
+
+    for(i in 1:length(final_dates)){
+
+      date_array <- array(
+        0
+        , dim = c(n, n, 2)
+        , dimnames = list(
+          actors
+          , actors
+          , c('mean_pos_goldstein', 'mean_neg_goldstein')
+          )
+      )
+
+      this_date <- final_dates[i]
+      this_events <- event_data[date %in% this_date]
+
+      if(nrow(this_events) > 0){
+        this_events <- unique(this_events)
+        this_events <- this_events[order(actora, actorb)]
+        this_dyad_pos_idx <- as.matrix(
+          this_events[mean_pos_goldstein > 0, list(as.integer(actora), as.integer(actorb))]
+        )
+        date_array[cbind(this_dyad_pos_idx, 1)] <- this_events[mean_pos_goldstein > 0, mean_pos_goldstein]
+
+        this_dyad_neg_idx <- as.matrix(
+          this_events[mean_neg_goldstein < 0, list(as.integer(actora), as.integer(actorb))]
+        )
+        date_array[cbind(this_dyad_neg_idx, 2)] <- this_events[mean_neg_goldstein < 0, mean_neg_goldstein]
+      }
+
+      dated_arrays[[i]] <- date_array
+    }
+
+
+  }
+
+
+  return(dated_arrays)
 }
 

@@ -15,7 +15,7 @@
 #'
 update_phoenix <- function(destpath){
   # pulls all the links from the OEDA Phoenix page
-  links <- phoenixNet::get_phoenixlinks()
+  links <- EventNetworks::get_phoenixlinks()
   links_shortened <- as.data.frame(stringr::str_match(links, "events.full.(\\d+).txt"), stringsAsFactors=FALSE)
   filelist <- list.files(destpath)
   filelist_shortened <- as.data.frame(stringr::str_match(filelist, "events.full.(\\d+).txt"), stringsAsFactors=FALSE)
@@ -28,6 +28,6 @@ update_phoenix <- function(destpath){
     message("There are ", nrow(new_files), " undownloaded daily files. Downloading now...")
     ll <- paste0("https://s3.amazonaws.com/oeda/data/current/", new_files$V1, ".zip")
     message("Downloading and unzipping files.")
-    plyr::l_ply(ll, phoenixNet:::dw_phoenixfile, destpath = destpath, .progress = plyr::progress_text(char = '='))
+    plyr::l_ply(ll, EventNetworks:::dw_phoenixfile, destpath = destpath, .progress = plyr::progress_text(char = '='))
   }
 }
