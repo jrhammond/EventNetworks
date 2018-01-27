@@ -16,6 +16,6 @@ test <- EventNetworks::eventNetworks(
            , codeset = 'all'
            , time_window = 'month'
            , code_subset = 'all'
-           , tie_type = 'count'
+           , tie_type = 'meangoldstein'
            , sources = 'all'
   )
