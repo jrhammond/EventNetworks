@@ -1,9 +1,7 @@
 `EventNetworks`
 =====
 
-__Note:__ I'm finally getting back to making some updates to the code and documentation. The end result should be a cleaner and more workable tool.
-
-Download, process, and transform historic and live-updated Phoenix and ICEWS auto-coded event data to temporal event-networks.
+Download, process, and transform historic and live-updated event data from the Phoenix and ICEWS repositories to temporal event-network structures for analysis.
 
 Package description
 ------------
@@ -61,75 +59,38 @@ Installation
 ------------
 `devtools::install_github("jrhammond/EventNetworks")`
 ```
-### Generate a set of temporal networks.
-
-test <- EventNetworks::eventNetworks(
+> pacman::p_load(EventNetworks)
+> 
+> sample_data <- EventNetworks::eventNetworks(
 +   start_date = 20140101
-+            , end_date = 20150101
-+            , level = 'pentaclass'
-+            , dv_key = [redacted lol]
-+            , phoenix_loc = 'C:\\Users\\Jesse\\Box Sync\\DataSets\\phoenix'
-+            , icews_loc = 'C:\\Users\\Jesse\\Box Sync\\DataSets\\icews'
-+            , histphoenix_loc = 'C:\\Users\\Jesse\\Box Sync\\DataSets\\CCHPED_v2017_06_30'
-+            , dv_server = 'harvard.dataverse.edu'
-+            , update = F
-+            , actorset = 'states'
-+            , codeset = 'all'
-+            , time_window = 'month'
-+            , code_subset = 'all'
-+            , tie_type = 'count'
-+            , sources = 'all'
++   , end_date = 20150101
++   , level = 'pentaclass'
++   , dv_key = [personal Harvard dataverse redacted]
++   , phoenix_loc = '/Users/localadmin/Box Sync/DataSets/phoenix'
++   , icews_loc = '/Users/localadmin/Box Sync/DataSets/icews'
++   , histphoenix_loc = '/Users/localadmin/Box Sync/DataSets/CCHPED_v2017_06_30'
++   , dv_server = 'harvard.dataverse.edu'
++   , update = F
++   , actorset = 'states'
++   , codeset = 'all'
++   , time_window = 'month'
++   , code_subset = 'all'
++   , tie_type = 'count'
++   , sources = 'all'
 +   )
 Checking ICEWS data...
 Ingesting ICEWS data...
 Reading in files...
-Read 879393 rows and 20 (of 20) columns from 0.216 GB file in 00:00:04
-Read 948320 rows and 20 (of 20) columns from 0.231 GB file in 00:00:04
-  |=============================================================| 100%
+  |===============================================================| 100%
 Process complete
 Munging ICEWS data...
 Ingesting Phoenix data...
 Note: specified range precedes the earliest Phoenix data.
 Reading in files...
-  |=============================================================| 100%
+  |===============================================================| 100%
 Process complete
 Ingesting historic Phoenix data...
 Read 817955 rows and 25 (of 25) columns from 0.096 GB file in 00:00:03
-Read 1092211 rows and 25 (of 25) columns from 0.133 GB file in 00:00:05
-Read 2906715 rows and 25 (of 25) columns from 0.373 GB file in 00:00:07
-
-## View the first temporal network layer.
-
-> test[[1]]
-NetworkDynamic properties:
-  distinct change times: 13 
-  maximal time range: 20140101 until  20150101 
-
- Dynamic (TEA) attributes:
-  Edge TEAs:    N.active 
-
-Includes optional net.obs.period attribute:
- Network observation period info:
-  Number of observation spells: 1 
-  Maximal time range observed: 20140101 until 20150102 
-  Temporal mode: discrete 
-  Time unit: step 
-  Suggested time increment: 1 
-
- Network attributes:
-  vertices = 255 
-  directed = TRUE 
-  hyper = FALSE 
-  loops = FALSE 
-  multiple = FALSE 
-  bipartite = FALSE 
-  net.obs.period: (not shown)
-  total edges= 5215 
-    missing edges= 0 
-    non-missing edges= 5215 
-
- Vertex attribute names: 
-    vertex.names 
-
- Edge attribute names not shown
+Read 1092211 rows and 25 (of 25) columns from 0.133 GB file in 00:00:03
+Read 2906715 rows and 25 (of 25) columns from 0.373 GB file in 00:00:08
  ```
